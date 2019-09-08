@@ -16,9 +16,9 @@ ROOT.TH1.SetDefaultSumw2()
 usage = "usage: %prog [options]"
 parser = argparse.ArgumentParser(usage)
 parser.add_argument("--tag"     , dest="tag"     , help="Unique tag for output"    , type=str, required=True)
-parser.add_argument("--peakfind"     , dest="peakfind"     , help="Select with peakfind"    , default=False, action="store_true")
-parser.add_argument("--minsum"     , dest="minsum"     , help="Select for min sum"    , default=False, action="store_true")
+parser.add_argument("--ts2"     , dest="ts2"     , help="Select for min ts2"    , type=int, default=0)
 parser.add_argument("--algo"            , dest="algo"         , help="Which reco scheme" , type=str, required=True)
+parser.add_argument("--basis"            , dest="basis"         , help="Which basis for extraction" , type=str, required=True)
 parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster"   , default=False, action="store_true")
 parser.add_argument("--nJobs", dest="nJobs", help="number of jobs"   , type=int, default=30)
 
@@ -31,12 +31,10 @@ eventsPerJob = 9000 / arg.nJobs
 exeStub = "python weightExtraction.py"
 exeStub += " --doBatch"
 exeStub += " --algo %s"%(arg.algo)
+exeStub += " --ts2 %d"%(arg.ts2)
 
-if arg.peakfind: exeStub += " --peakfind"
-if arg.minsum: exeStub += " --minsum"
-
-taskDir = date_and_time
-outputDir = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/%s/root"%(arg.tag)
+taskDir = arg.algo + "_" +arg.basis + "_" + arg.tag + "_" + date_and_time
+outputDir = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/%s/%s/%s/root"%(arg.algo,arg.basis,arg.tag)
 workingDir = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir)
 
 #subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])

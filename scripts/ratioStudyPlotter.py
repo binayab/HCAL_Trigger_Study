@@ -14,7 +14,7 @@ def ratioTPVsRH_Eta_ET(evtsTree, basis = "TP", bx = "(1==1)"):
         etBranch = "RH_energy"
         tpMinSelection = "TP_energy>0.5"
 
-    h3 = ROOT.TH3F("h3_%sET"%(basis), "h3_%sET"%(basis), 57, -28.5, 28.5, 300, 0., 20.0, 1000, -0.25, 499.75)
+    h3 = ROOT.TH3F("h3_%sET"%(basis), "h3_%sET"%(basis), 57, -28.5, 28.5, 720, 0., 20.0, 1000, -0.25, 499.75)
 
     evtsTree.Draw("%s:TP_energy/RH_energy:ieta>>h3_%sET"%(etBranch,basis), "tp_soi!=255 && %s && RH_energy>0. && %s"%(tpMinSelection,bx))
 
@@ -47,6 +47,40 @@ def ratioTPVsRH_Eta(outfile, histo, etRange = []):
     elif len(etRange) == 2:
         h2.Write("Ratio_TP-RH_vs_Eta_%sET%0.1f-%0.1f"%(basis,etRange[0],etRange[1]))
 
+def ratioTPVsRH(outfile, histo, etRange = [], etaRange = []):
+
+    outfile.cd()
+
+    basis = histo.GetTitle().split("_")[1][0:2]
+
+    h2 = 0; etStr = ""
+    if len(etRange) == 0:
+        histo.GetZaxis().SetRange(1, histo.GetZaxis().GetNbins())
+    elif len(etRange) == 1:
+        histo.GetZaxis().SetRange(histo.GetZaxis().FindBin(etRange[0]),histo.GetZaxis().FindBin(etRange[0]))
+        etStr = "_%sET%0.1f"%(basis,etRange[0])
+    elif len(etRange) == 2:
+        histo.GetZaxis().SetRange(histo.GetZaxis().FindBin(etRange[0])+1,histo.GetZaxis().FindBin(etRange[1]))
+        etStr = "_%sET%0.1f-%0.1f"%(basis,etRange[0],etRange[1])
+    histo.GetZaxis().SetBit(ROOT.TAxis.kAxisRange)
+    h2 = histo.Project3D("yx")
+
+    h = 0; etaStr = ""
+    if len(etaRange) == 0:
+        h = h2.ProjectionY("%s_proj"%(h2.GetTitle()), 1, h2.GetxAxis().GetNbins())
+    elif len(etaRange) == 1:
+        h = h2.ProjectionY("%s_proj"%(h2.GetTitle()), h2.GetXaxis().FindBin(etaRange[0]),h2.GetXaxis().FindBin(etaRange[0]))
+        etaStr = "_ieta%d"%(etaRange[0])
+    elif len(etaRange) == 2:
+        h = h2.ProjectionY("%s_proj"%(h2.GetTitle()), h2.GetXaxis().FindBin(etaRange[0]),h2.GetXaxis().FindBin(etaRange[1]))
+        etaStr = "_ieta%d-%d"%(etaRange[0],etaRange[1])
+
+    h.SetTitle("")
+    h.GetXaxis().SetTitle("E_{T,TP} / E_{T,RH}")
+    h.GetYaxis().SetTitle("A.U.")
+
+    h.Write("Ratio_TP-RH%s%s"%(etStr,etaStr))
+
 def analysis(PFAFile):
 
         stub = PFAFile.split("/")[-1].split(".root")[0]
@@ -60,11 +94,15 @@ def analysis(PFAFile):
 
         fPFA.Close()
 
-        ratioTPVsRH_Eta(outFile,TPETvRatiovEta_42,[0.5,1000])
+        for ieta in xrange(1,29):
+            ratioTPVsRH(outFile,TPETvRatiovEta_42,[0.5,10],[ieta])
+            ratioTPVsRH(outFile,TPETvRatiovEta_42,[1.5,10],[ieta])
+            ratioTPVsRH(outFile,TPETvRatiovEta_42,[10, 1000],[ieta])
+
         ratioTPVsRH_Eta(outFile,TPETvRatiovEta_42,[0.5,10])
+        ratioTPVsRH_Eta(outFile,TPETvRatiovEta_42,[1.5,10])
         ratioTPVsRH_Eta(outFile,TPETvRatiovEta_42,[10, 1000])
 
-        ratioTPVsRH_Eta(outFile,RHETvRatiovEta_42,[0.5,1000])
         ratioTPVsRH_Eta(outFile,RHETvRatiovEta_42,[0.5,10])
         ratioTPVsRH_Eta(outFile,RHETvRatiovEta_42,[10, 1000])
 

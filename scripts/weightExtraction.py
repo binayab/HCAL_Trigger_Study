@@ -10,11 +10,11 @@ ROOT.TH1.SetDefaultSumw2()
 
 usage = "usage: %prog [options]"
 parser = argparse.ArgumentParser(usage)
-parser.add_argument("--tag"     , dest="tag"     , help="Unique tag for output"    , type=str, default="setATag")
+parser.add_argument("--tag"     , dest="tag"     , help="Unique tag for output"    , type=str, default="")
 parser.add_argument("--fromCache"     , dest="fromCache"     , help="Read from cache"    , default=False, action="store_true")
-parser.add_argument("--peakfind"     , dest="peakfind"     , help="Select with peakfind"    , default=False, action="store_true")
-parser.add_argument("--minsum"     , dest="minsum"     , help="Select for min sum"    , default=False, action="store_true")
-parser.add_argument("--algo"            , dest="algo"         , help="Which reco scheme" , type=str, required=True)
+parser.add_argument("--ts2"     , dest="ts2"     , help="Select for min ts2"    , type=int, default=0)
+parser.add_argument("--algo"            , dest="algo"         , help="Which reco scheme" , type=str, default="ALGO")
+parser.add_argument("--basis"            , dest="basis"        , help="Which basis for extract" , type=str, default="BASIS")
 parser.add_argument("--evtRange"      , dest="evtRange"      , help="Start and number", type=int, nargs="+", default=[])
 parser.add_argument("--doBatch"     , dest="doBatch"     , help="Run in batch"    , default=False, action="store_true")
 
@@ -1035,24 +1035,18 @@ class WeightExtractor:
             self.tpPresamples = 2 # PFA2p uses two presamples
             self.tpSamples = 2    # SOI and SOI+1 are used to sample non-PU pulse
             self.offset = 3       # We need this offset to scan 8TS digi starting from 0
-            self.fitOpt = {0 : [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                           1 : [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]}
         elif scheme == "PFA3p":
             self.tpPresamples = 1 # PFA3p uses two SOI and SOI+1 fully and SOI-1 presample
             self.tpSamples = 2    # SOI and SOI+1 are used to sample non-PU pulse
             self.offset = 3       # We need this offset to scan 8TS digi starting from 0
-            self.fitOpt = {1 : [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,1,0,0]}
-        elif scheme == "PFA1":
+        elif scheme == "PFA1p":
             self.tpPresamples = 1 # PFA1 uses SOI fully and SOI-1 presample to subtract
             self.tpSamples = 1    # Only SOI is used to sample non-PU pulse
             self.offset = 3       # The offset is not really relevant here
-            self.fitOpt = {1 : [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]}
-        elif scheme == "PFA1p":
+        elif scheme == "PFA1pp":
             self.tpPresamples = 2 # PFA1p uses SOI fully and SOI-2 and SOI-1 presamples to subtract
             self.tpSamples = 1    # Only SOI is used to sample non-PU pulse
             self.offset = 3       # The offset is not really relevant here
-            self.fitOpt = {0 : [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0],
-                           1 : [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,1,1,1,1,1,1,1]}
 
         self.SOI = 3          # SOI for 8TS digi is always 3
         self.scheme = scheme  # Which algo
@@ -1074,7 +1068,7 @@ class WeightExtractor:
         for ieta in gHBHEieta:
             name = "h_%d_w"%(ieta)
             self.weightHistos[ieta] = ROOT.TH2F(name, name, 4, -0.5, 3.5, 720, -50.0, 50.0)
-            self.corrHistos[ieta] = ROOT.TH2F(name+"_corr", name+"_corr", 720, -50.0, 50.0, 720, -50.0, 50.0)
+            self.corrHistos[ieta] = ROOT.TH2F(name+"_corr", name+"_corr", 360, -50.0, 50.0, 360, -50.0, 50.0)
 
     def extractWeights(self, ieta, puPulse, nopuPulse):
 
@@ -1244,7 +1238,7 @@ class WeightExtractor:
                       +self.ttreepu.ts6[iTP]+self.ttreepu.ts7[iTP] < 1: continue
 
                     # Can we justify this?
-                    if self.ttreepu.ts2[iTP] <= 3: continue
+                    if self.ttreepu.ts2[iTP] <= minTS2: continue
 
                     # Have something in SOI-1 and SOI-2 the presamples
                     #if self.ttreepu.ts1[iTP] < 1 or self.ttreepu.ts2[iTP] < 1: continue
@@ -1270,13 +1264,6 @@ class WeightExtractor:
                             bx0Sum = self.ttreepu.ts1[iTP]+self.ttreepu.ts2[iTP]+self.ttreepu.ts3[iTP]
                         elif self.tpPresamples == 1:
                             bx0Sum = self.ttreepu.ts2[iTP]+self.ttreepu.ts3[iTP]
-
-                    # No peak, no count
-                    if peakfind and (peak < postPeak or peak <= prePeak): continue
-
-                    # xTS > 0.5 GeV (0.5 GeV == 15 (33) ADC in 5 degree (10 degree) rings?)
-                    if minsum and ((abs(ieta) < 21 and bx0Sum < 16) or \
-                                   (abs(ieta) >= 21 and bx0Sum < 33)): continue
 
                 #    nTPsPUmap[abs(ieta)] += 1    
 
@@ -1319,13 +1306,6 @@ class WeightExtractor:
                 #        bx0Sum = self.ttreenopu.ts1[jTP]+self.ttreenopu.ts2[jTP]+self.ttreenopu.ts3[jTP]+self.ttreenopu.ts4[jTP]
                 #    elif self.scheme == "PFA3p":
                 #        bx0Sum = self.ttreenopu.ts2[jTP]+self.ttreenopu.ts3[jTP]+self.ttreenopu.ts4[jTP]
-
-                #    # xTS sum > 0.5 GeV
-                #    if minsum and ((abs(jeta) < 21 and bx0Sum < 16) or \
-                #                   (abs(jeta) >= 21 and bx0Sum < 33)): continue 
-
-                #    # No peak, no count
-                #    if peakfind and (peak < postPeak or peak <= prePeak): continue 
 
                 #    nTPsNOPUmap[abs(jeta)] += 1
 
@@ -1397,17 +1377,6 @@ class WeightExtractor:
                                     jBX0Sum = self.ttreenopu.ts1[jTP]+self.ttreenopu.ts2[jTP]+self.ttreenopu.ts3[jTP]
                                 elif self.tpPresamples == 1:
                                     jBX0Sum = self.ttreenopu.ts2[jTP]+self.ttreenopu.ts3[jTP]
-
-                            # No peak, no count
-                            if peakfind and (jPeak < jPostPeak or jPeak <= jPrePeak): 
-                                hotStart = jTP
-                                break 
-
-                            # xTS > 0.5 GeV
-                            if minsum and ((abs(jeta) < 21 and jBX0Sum < 16) or \
-                                           (abs(jeta) >= 21 and jBX0Sum < 33)):
-                               hotStart = jTP
-                               break 
 
                             print "category   PU | event %s | ieta %d | iphi %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]"%(self.ttreepu.event, ieta, iphi, self.ttreepu.ts0[iTP], self.ttreepu.ts1[iTP],self.ttreepu.ts2[iTP],self.ttreepu.ts3[iTP],self.ttreepu.ts4[iTP],self.ttreepu.ts5[iTP],self.ttreepu.ts6[iTP],self.ttreepu.ts7[iTP])
                             print "category NOPU | event %s | ieta %d | iphi %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]"%(self.ttreenopu.event, jeta, jphi, self.ttreenopu.ts0[jTP], self.ttreenopu.ts1[jTP],self.ttreenopu.ts2[jTP],self.ttreenopu.ts3[jTP],self.ttreenopu.ts4[jTP],self.ttreenopu.ts5[jTP],self.ttreenopu.ts6[jTP],self.ttreenopu.ts7[jTP])
@@ -1492,6 +1461,7 @@ class WeightExtractor:
             cname = "c_ieta%d_%s"%(ieta,category)
             canvas = ROOT.TCanvas(cname, cname, 2400, 2400); canvas.cd()
             ROOT.gPad.SetRightMargin(0.13)
+            ROOT.gPad.SetLeftMargin(0.12)
 
             temp.GetZaxis().SetRange(ieta,ieta)
             temp.SetBit(ROOT.TAxis.kAxisRange)
@@ -1528,55 +1498,61 @@ class WeightExtractor:
             canvas.SetLogz()
             canvas.SaveAs("%s/PulseShapes/%d/%s_MeanPulse.pdf"%(self.outPath,ieta,category))
 
-    def extractFromFit(self, ieta, ts, fitOpt=0, save=False):
+    def drawWeightCorrs(self):
+
+        for ieta,histo in self.corrHistos.iteritems():
+            cname = "c_ieta%d_corr"%(ieta)
+            canvas = ROOT.TCanvas(cname, cname, 2400, 2400); canvas.cd()
+            ROOT.gPad.SetLeftMargin(0.12)
+            ROOT.gPad.SetRightMargin(0.13)
+            ROOT.gPad.SetTopMargin(0.02)
+
+            histo.SetContour(255)
+            histo.RebinX(3); histo.RebinY(3)
+            histo.SetTitle("")
+            histo.GetYaxis().SetTitle("w_{SOI-1}")
+            histo.GetYaxis().SetRangeUser(-20,20)
+            histo.GetXaxis().SetTitle("w_{SOI-2}")
+            histo.GetXaxis().SetRangeUser(-20,20)
+
+            histo.GetYaxis().SetLabelSize(0.6*0.065); histo.GetYaxis().SetTitleSize(0.6*0.085); histo.GetYaxis().SetTitleOffset(0.6/0.51)
+            histo.GetXaxis().SetTitleSize(0.6*0.085); histo.GetXaxis().SetTitleOffset(0.9)
+            histo.GetXaxis().SetLabelSize(0.6*0.065)
+            histo.Draw("COLZ")
+
+            canvas.SetLogz()
+            canvas.SetGridx()
+            canvas.SetGridy()
+            canvas.SaveAs("%s/Fits/%d/Weight_Correlation.pdf"%(self.outPath,ieta))
+
+    def extractFromFit(self, ieta, ts, save=False):
+
+        rebin = 2
 
         theBin = self.weightHistos[ieta].GetXaxis().FindBin(ts)
         projHisto = self.weightHistos[ieta].ProjectionY("proj_%d_%d"%(ieta,ts), theBin, theBin)
 
-        projHisto.Rebin(2)
+        projHisto.Rebin(rebin)
         projHisto.Scale(1./projHisto.Integral())
 
-        funcString = ""; theFunc = 0; negation = 0.; notation = ""
-        if fitOpt == 0:
-            negation = -1.
-            notation = "Mode"
-            funcString = "[0]*TMath::LogNormal(-x,[1],[2],[3])"
-            theFunc = ROOT.TF1("theFunc_%s_ieta%s"%(ts,ieta), funcString, -0.01, -5)
+        funcString = ""; theFunc = 0; fitRange = float(rebin)/4.0 + 0.5
+        notation = "#mu"
+        funcString = "gaus(0)"
+        binmax = projHisto.GetMaximumBin()
+        xmax = projHisto.GetBinCenter(binmax)
+        theFunc = ROOT.TF1("theFunc_%s_ieta%s"%(ts,ieta), funcString, xmax-fitRange, xmax+fitRange)
 
-            theFunc.SetParameters(1, 2.5, 0, 2.5)
-            theFunc.SetParNames("A", "sigma", "theta", "m")
-            theFunc.SetParLimits(1, 0.1,5)
-            theFunc.SetParLimits(2, 0, 0.01)
-            theFunc.SetParLimits(3, 0.1, 5)
-        elif fitOpt == 1:
-            negation = 1.
-            notation = "#mu"
-            funcString = "gaus(0)"
-            binmax = projHisto.GetMaximumBin()
-            xmax = projHisto.GetBinCenter(binmax)
-            theFunc = ROOT.TF1("theFunc_%s_ieta%s"%(ts,ieta), funcString, xmax-1.0, xmax+1.0)
-
-            theFunc.SetParameters(1, -1, 2.5)
-            theFunc.SetParNames("A", "mu", "sigma")
-            theFunc.SetParLimits(1, -0.1,-5)
-            theFunc.SetParLimits(2, 0, 5)
+        theFunc.SetParameters(1, -1, 2.5)
+        theFunc.SetParNames("A", "mu", "sigma")
+        theFunc.SetParLimits(1, -0.1,-5)
+        theFunc.SetParLimits(2, 0, 5)
 
         projHisto.Fit("theFunc_%s_ieta%s"%(ts,ieta), "QMRWL")
 
-        theWeight = 0.; theWeightErr = 0.; sigma = theFunc.GetParameter("sigma"); sigmaErr = 0
-        if fitOpt == 0:
-            sigmaErr = theFunc.GetParError(1)
-            m = theFunc.GetParameter("m"); mErr = theFunc.GetParError(3)
-            mu = ROOT.TMath.Log(m); muErr = mErr/m 
-
-            theWeight = ROOT.TMath.Exp(mu - sigma**2) # Mode of the fit
-            theWeightErr = theWeight * ((2 * sigmaErr * sigma)**2 + muErr**2)**0.5
-        elif fitOpt == 1:
-           theWeight = theFunc.GetParameter("mu")
-           theWeightErr = theFunc.GetParError(1)
-           sigmaErr = theFunc.GetParError(2)
-
-        theWeight *= negation
+        theWeight = theFunc.GetParameter("mu")
+        theWeightErr = theFunc.GetParError(1)
+        sigma = theFunc.GetParameter("sigma")
+        sigmaErr = theFunc.GetParError(2)
 
         if save:
             canvas = ROOT.TCanvas("c_%s_%s"%(ieta,ts), "c_%s_%s"%(ieta,ts), 2400, 2400); canvas.cd()
@@ -1631,15 +1607,19 @@ class WeightExtractor:
         if ieta in self.fitErrors: self.fitErrors[ieta][ts] = theWeightErr 
         else: self.fitErrors[ieta] = {ts : theWeightErr}
 
-    def getWeightSummary(self):
+    def getWeightSummary(self, ):
 
         aveIetaTSweight = {"HB" : {}, "HE1" : {}, "HE2" : {}} 
-        for ieta in gHBHEieta:
-            for ts in self.fitOpt.keys():
-                aveIetaTSweight["HB"][ts] = 0.0
-                aveIetaTSweight["HE1"][ts] = 0.0
-                aveIetaTSweight["HE2"][ts] = 0.0
-                self.extractFromFit(ieta,ts,self.fitOpt[ts][ieta-1],save=True)
+
+        tsFloat = [1]
+        if self.tpPresamples == 2: tsFloat.append(0)
+
+        for ts in tsFloat:
+            aveIetaTSweight["HB"][ts] = 0.0
+            aveIetaTSweight["HE1"][ts] = 0.0
+            aveIetaTSweight["HE2"][ts] = 0.0
+
+            for ieta in gHBHEieta: self.extractFromFit(ieta,ts,save=True)
 
         tpsHB = self.ietaDensity.Integral(self.ietaDensity.GetXaxis().FindBin(1),self.ietaDensity.GetXaxis().FindBin(16))
         tpsHE1 = self.ietaDensity.Integral(self.ietaDensity.GetXaxis().FindBin(17),self.ietaDensity.GetXaxis().FindBin(20))
@@ -1671,7 +1651,7 @@ class WeightExtractor:
         for det,ws in aveIetaTSweight.iteritems():
             summary.write("%s: "%(det))
             for ts,w in ws.iteritems(): 
-                summary.write("%3.2f, "%(w))
+                summary.write("%3.2f  "%(w))
         
         summary.close()
 
@@ -1681,8 +1661,8 @@ if __name__ == '__main__':
     tag = arg.tag 
     fromCache = arg.fromCache
     scheme = arg.algo
-    peakfind = arg.peakfind
-    minsum = arg.minsum
+    basis = arg.basis
+    minTS2 = arg.ts2
 
     # Inclusive ieta range for HBHE
     gHBHEieta = list(xrange(1,29))
@@ -1696,7 +1676,7 @@ if __name__ == '__main__':
     ietaRange = [] 
     aPath = ""; outPath = "./"
     if not doBatch:
-        outPath = "./plots/Weights/%s"%(tag)
+        outPath = "./plots/Weights/%s/%s/%s"%(scheme,basis,tag)
 
         # Establish output directory hierarchy
         for ieta in gHBHEieta:
@@ -1716,3 +1696,4 @@ if __name__ == '__main__':
 
         theExtractor.drawPulseShapes("PU")
         theExtractor.drawPulseShapes("NOPU")
+        theExtractor.drawWeightCorrs()

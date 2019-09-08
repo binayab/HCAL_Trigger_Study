@@ -1,8 +1,11 @@
 import FWCore.ParameterSet.Config as cms
-
 from Configuration.StandardSequences.Eras import eras
 
 import sys
+
+sys.path.insert(0, "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/scripts/")
+
+from algo_weights import pfaWeightsMap
 
 if len(sys.argv) < 5:
     print("An example call to cmsRun: 'cmsRun analyze_HcalTrig.py 3 325170 Run3 /path/to/input.root'")
@@ -43,22 +46,39 @@ else:
     process.simHcalTriggerPrimitiveDigis.numberOfSamples = 1
     process.simHcalTriggerPrimitiveDigis.numberOfPresamples = 0
 
-process.simHcalTriggerPrimitiveDigis.PeakFinderAlgorithmName = cms.untracked.string(PFA)
+if PFA in pfaWeightsMap:
+    print "Using weights: "
+    print pfaWeightsMap[PFA]
+    process.simHcalTriggerPrimitiveDigis.PeakFinderAlgorithmWeights = pfaWeightsMap[PFA] 
+else:
+    print "No weights defined for algo \"%s\"; defaulting to zero weights!"%(PFA)
 
 process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(-1)
 )
 
 # Input source
-if inputFile == "NULL":
+if inputFile == "OOT":
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            #'root://cmsxrootd.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT1.root',
-            #'root://cmsxrootd.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT2.root',
-            #'root://cmsxrootd.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT3.root',
+            'root://cmsxroot.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT1.root',
+            'root://cmsxroot.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT2.root',
+            'root://cmsxroot.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT3.root',
     
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+elif inputFile == "NOPU":
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
             'root://cmsxrootd.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-0PU123.root',
-    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif inputFile == "50PU": 
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
             #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/C2FD7B09-F941-BD42-AB29-C3E4233A60A8.root',
             #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/1B8D20FE-65FD-484E-9591-B5EF9025F64A.root',
             #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/B8C949D2-75D7-EC40-A0AF-6E8CE5B636C5.root',
@@ -77,6 +97,33 @@ if inputFile == "NULL":
             #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/10149E52-5B6C-CE4A-8FAD-9BA2DF4E48BC.root',
             #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/D7D9FE11-43DD-0045-936B-0FAAFA5525F7.root',
             #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/8B4A80CD-AFF2-0B42-9E72-2D4FAB0D88C5.root',
+
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/043D2BF4-43C5-614F-BD81-D3C88968DD54.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/0FD371C3-32CA-6F4B-BCF4-013E0E73E988.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/1E38A61E-9906-6C4C-A286-524E5A59FB08.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/2AB2AC8F-C73A-0E42-8273-5FC1DC8C51E1.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/31958CF2-326B-6147-A06B-E51D7F493A33.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/31A48641-DF74-E244-970A-A69360E555E5.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/3FEE5DBF-DBDB-354E-9621-511A6908B009.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/56CE3E5D-6B17-9848-850B-B64142220B27.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/61FCF587-60D7-534A-8840-42C5736DD89D.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/64CD68F1-F9DE-554A-A997-BC4C2D1D3555.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/65E41851-B549-B24C-936A-040D5E0FB438.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/72978C5E-F4AC-ED4A-AD24-0CEEEB914300.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/79337207-D3E7-1A4A-8ECB-78ACBA3EFC43.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/9D068ED9-57BA-374A-99B4-188A8B017283.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/9D73926A-B466-004C-ABBD-50747ABE5565.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/9D922D01-3F40-314C-B50C-BB63B3B7A32F.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/AF74BABA-08FF-7D44-A577-A3C29343DD15.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/C756B891-8A34-EE43-B927-71806654289A.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/D24BCD6F-D41B-8143-AFB3-A6205999FD12.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/D8F3426D-B596-7B49-95D0-3C854169407C.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/DF4E49C7-1447-AF43-A86C-170AB21A8384.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/E727ABB5-7B1D-D74B-9D4B-682D5230388D.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/EEFEF44C-05F0-874B-B69D-C1F19A5AC94C.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/F68D0E05-BE8A-3344-9A65-33091666B3EE.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/FDF31EC8-D103-AE49-B3CA-9E58F67C07F1.root',
+
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
@@ -87,7 +134,7 @@ else:
         secondaryFileNames = cms.untracked.vstring(),
     )
 
-#process.source.eventsToProcess = cms.untracked.VEventRange(cms.EventRange("1:2904-1:2904"),)
+#process.source.eventsToProcess = cms.untracked.VEventRange(cms.EventRange("1:2903-1:2903"),)
 
 process.options = cms.untracked.PSet(
 
