@@ -96,11 +96,12 @@ def analysis(PFAFile):
 
         for ieta in xrange(1,29):
             ratioTPVsRH(outFile,TPETvRatiovEta_42,[0.5,10],[ieta])
-            ratioTPVsRH(outFile,TPETvRatiovEta_42,[1.5,10],[ieta])
             ratioTPVsRH(outFile,TPETvRatiovEta_42,[10, 1000],[ieta])
 
+            ratioTPVsRH(outFile,RHETvRatiovEta_42,[0.5,10],[ieta])
+            ratioTPVsRH(outFile,RHETvRatiovEta_42,[10, 1000],[ieta])
+
         ratioTPVsRH_Eta(outFile,TPETvRatiovEta_42,[0.5,10])
-        ratioTPVsRH_Eta(outFile,TPETvRatiovEta_42,[1.5,10])
         ratioTPVsRH_Eta(outFile,TPETvRatiovEta_42,[10, 1000])
 
         ratioTPVsRH_Eta(outFile,RHETvRatiovEta_42,[0.5,10])

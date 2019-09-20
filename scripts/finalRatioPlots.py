@@ -179,7 +179,7 @@ if __name__ == '__main__':
                 someTextPFAY.AddText(algoName)
                 someTextPFAY.AddText("#mu = %3.2f"%(mapPFAhistos["PFAY"][name].GetMean()))
                 someTextPFAY.AddText("#sigma = %3.2f"%(mapPFAhistos["PFAY"][name].GetStdDev()))
-                someTextPFAY.SetTextColor(ROOT.kBlack)
+                someTextPFAY.SetTextColor(ROOT.kGray+2)
                 someTextPFAY.Draw("SAME")
 
             if "PFAX2" in mapPFAhistos:

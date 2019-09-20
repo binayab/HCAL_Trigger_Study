@@ -128,6 +128,16 @@ elif inputFile == "50PU":
         secondaryFileNames = cms.untracked.vstring(),
     )
 
+elif inputFile == "DATA":
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/DC207766-1C12-DC44-B679-89EB77C5EE2A.root',
+            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/0B051695-EFBF-3F47-874D-92DE9278FA75.root',
+            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/335207C6-3C98-0848-84D0-0D49FE1B444B.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
 else:
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring('%s'%(inputFile),),
@@ -157,7 +167,8 @@ if "MC" in run:
     if era == "Run2":
         process.GlobalTag = GlobalTag(process.GlobalTag, '102X_upgrade2018_realistic_v12', '')
     elif era == "Run3":
-        process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+        process.GlobalTag = GlobalTag(process.GlobalTag, '106X_mcRun3_2021_realistic_v3', '')
+
 else:
     process.GlobalTag = GlobalTag(process.GlobalTag, '101X_dataRun2_Prompt_v11', '')
 

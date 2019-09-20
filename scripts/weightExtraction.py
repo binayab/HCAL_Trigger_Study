@@ -1,4 +1,4 @@
-import sys, os, ROOT, numpy, argparse
+import sys, os, ROOT, numpy, argparse, math
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
@@ -1055,8 +1055,8 @@ class WeightExtractor:
         self.fits = {}        # Currently maps ieta,ts to a mean weight
         self.fitErrors = {}        # Currently maps ieta,ts to a error on weight 
         self.event = -1       # Current event we are looking at
-        self.pulseShapesPU = 0 
-        self.pulseShapesNOPU = 0 
+        self.pulseShapesPU = {} 
+        self.pulseShapesNOPU = {} 
         self.tfilepu = ROOT.TFile.Open(inputFilePU, "r")
         self.tfilenopu = ROOT.TFile.Open(inputFileNOPU, "r")
         self.ttreepu = self.tfilepu.Get("compareReemulRecoSeverity9/events")
@@ -1069,6 +1069,7 @@ class WeightExtractor:
             name = "h_%d_w"%(ieta)
             self.weightHistos[ieta] = ROOT.TH2F(name, name, 4, -0.5, 3.5, 720, -50.0, 50.0)
             self.corrHistos[ieta] = ROOT.TH2F(name+"_corr", name+"_corr", 360, -50.0, 50.0, 360, -50.0, 50.0)
+            self.pulseShapesPU[ieta] = ROOT.TH2F("pulseShape_PU", "pulseShape_PU", 8, -0.5, 7.5, 2048, -0.5, 2047.5, 28, 0.5, 28.5)
 
     def extractWeights(self, ieta, puPulse, nopuPulse):
 
@@ -1265,68 +1266,6 @@ class WeightExtractor:
                         elif self.tpPresamples == 1:
                             bx0Sum = self.ttreepu.ts2[iTP]+self.ttreepu.ts3[iTP]
 
-                #    nTPsPUmap[abs(ieta)] += 1    
-
-                #    pulseMapPU[abs(ieta)][0] += self.ttreepu.ts0[iTP]
-                #    pulseMapPU[abs(ieta)][1] += self.ttreepu.ts1[iTP]
-                #    pulseMapPU[abs(ieta)][2] += self.ttreepu.ts2[iTP]
-                #    pulseMapPU[abs(ieta)][3] += self.ttreepu.ts3[iTP]
-                #    pulseMapPU[abs(ieta)][4] += self.ttreepu.ts4[iTP]
-                #    pulseMapPU[abs(ieta)][5] += self.ttreepu.ts5[iTP]
-                #    pulseMapPU[abs(ieta)][6] += self.ttreepu.ts6[iTP]
-                #    pulseMapPU[abs(ieta)][7] += self.ttreepu.ts7[iTP]
-
-                #    self.pulseShapesPU.Fill(0, self.ttreepu.ts0[iTP], abs(ieta))
-                #    self.pulseShapesPU.Fill(1, self.ttreepu.ts1[iTP], abs(ieta))
-                #    self.pulseShapesPU.Fill(2, self.ttreepu.ts2[iTP], abs(ieta))
-                #    self.pulseShapesPU.Fill(3, self.ttreepu.ts3[iTP], abs(ieta))
-                #    self.pulseShapesPU.Fill(4, self.ttreepu.ts4[iTP], abs(ieta))
-                #    self.pulseShapesPU.Fill(5, self.ttreepu.ts5[iTP], abs(ieta))
-                #    self.pulseShapesPU.Fill(6, self.ttreepu.ts6[iTP], abs(ieta))
-                #    self.pulseShapesPU.Fill(7, self.ttreepu.ts7[iTP], abs(ieta))
-
-                #for jTP in xrange(0, len(self.ttreenopu.ieta)):
-                #    jeta = self.ttreenopu.ieta[jTP]
-                #    jphi = self.ttreenopu.iphi[jTP]
-
-                #    # Due to ordering once we hit HF stop looping!
-                #    if abs(jeta) > 28: break
-
-                #    # Always kill all-0 8TS
-                #    if self.ttreenopu.ts0[jTP]+self.ttreenopu.ts1[jTP]+self.ttreenopu.ts2[jTP]\
-                #      +self.ttreenopu.ts3[jTP]+self.ttreenopu.ts4[jTP]+self.ttreenopu.ts5[jTP]\
-                #      +self.ttreenopu.ts6[jTP]+self.ttreenopu.ts7[jTP] < 1: continue
-
-                #    bx0Sum = 0 
-                #    peak = self.ttreenopu.ts3[jTP]+self.ttreenopu.ts4[jTP]
-                #    postPeak = self.ttreenopu.ts4[jTP]+self.ttreenopu.ts5[jTP]
-                #    prePeak = self.ttreenopu.ts2[jTP]+self.ttreenopu.ts3[jTP] 
-
-                #    if self.scheme == "PFA2p":
-                #        bx0Sum = self.ttreenopu.ts1[jTP]+self.ttreenopu.ts2[jTP]+self.ttreenopu.ts3[jTP]+self.ttreenopu.ts4[jTP]
-                #    elif self.scheme == "PFA3p":
-                #        bx0Sum = self.ttreenopu.ts2[jTP]+self.ttreenopu.ts3[jTP]+self.ttreenopu.ts4[jTP]
-
-                #    nTPsNOPUmap[abs(jeta)] += 1
-
-                #    pulseMapNOPU[abs(jeta)][0] += self.ttreenopu.ts0[jTP]
-                #    pulseMapNOPU[abs(jeta)][1] += self.ttreenopu.ts1[jTP]
-                #    pulseMapNOPU[abs(jeta)][2] += self.ttreenopu.ts2[jTP]
-                #    pulseMapNOPU[abs(jeta)][3] += self.ttreenopu.ts3[jTP]
-                #    pulseMapNOPU[abs(jeta)][4] += self.ttreenopu.ts4[jTP]
-                #    pulseMapNOPU[abs(jeta)][5] += self.ttreenopu.ts5[jTP]
-                #    pulseMapNOPU[abs(jeta)][6] += self.ttreenopu.ts6[jTP]
-                #    pulseMapNOPU[abs(jeta)][7] += self.ttreenopu.ts7[jTP]
-
-                #    self.pulseShapesNOPU.Fill(0, self.ttreenopu.ts0[jTP], self.ttreenopu.event)
-                #    self.pulseShapesNOPU.Fill(1, self.ttreenopu.ts1[jTP], self.ttreenopu.event)
-                #    self.pulseShapesNOPU.Fill(2, self.ttreenopu.ts2[jTP], self.ttreenopu.event)
-                #    self.pulseShapesNOPU.Fill(3, self.ttreenopu.ts3[jTP], self.ttreenopu.event)
-                #    self.pulseShapesNOPU.Fill(4, self.ttreenopu.ts4[jTP], self.ttreenopu.event)
-                #    self.pulseShapesNOPU.Fill(5, self.ttreenopu.ts5[jTP], self.ttreenopu.event)
-                #    self.pulseShapesNOPU.Fill(6, self.ttreenopu.ts6[jTP], self.ttreenopu.event)
-                #    self.pulseShapesNOPU.Fill(7, self.ttreenopu.ts7[jTP], self.ttreenopu.event)
-
                     for jTP in xrange(hotStart, len(self.ttreenopu.ieta)):
                         jeta = self.ttreenopu.ieta[jTP]
                         jphi = self.ttreenopu.iphi[jTP]
@@ -1425,15 +1364,6 @@ class WeightExtractor:
 
                             hotStart = jTP
                             break
-
-                # Make sure we have average pulse
-                #for anIeta in pulseMapPU.keys():
-                #    try:
-                #        pulseMapPU[anIeta] = numpy.array([float(ts)/nTPsPUmap[anIeta] for ts in pulseMapPU[anIeta]])
-                #        pulseMapNOPU[anIeta] = numpy.array([float(ts)/nTPsNOPUmap[anIeta] for ts in pulseMapNOPU[anIeta]])
-                #    except:
-                #        print "No TPs in one of the categories"
-                #    self.extractWeights(anIeta, pulseMapPU[anIeta], pulseMapNOPU[anIeta]) 
 
                 print "Processed event %d => %d..."%(iEvent,gEventRange[-1])
 
@@ -1535,24 +1465,46 @@ class WeightExtractor:
         projHisto.Rebin(rebin)
         projHisto.Scale(1./projHisto.Integral())
 
-        funcString = ""; theFunc = 0; fitRange = float(rebin)/4.0 + 0.5
         notation = "#mu"
-        funcString = "gaus(0)"
         binmax = projHisto.GetMaximumBin()
         xmax = projHisto.GetBinCenter(binmax)
-        theFunc = ROOT.TF1("theFunc_%s_ieta%s"%(ts,ieta), funcString, xmax-fitRange, xmax+fitRange)
+        funcString = ""; theFunc = 0; fitWidth = 1. + (float(rebin)-1)/8; fitRange = [xmax-fitWidth,xmax+fitWidth]
+        if ieta >= 21 and self.tpPresamples == 1:
+            funcString = "[0]*TMath::LogNormal(-x, [1], [2], [3])"
+            theFunc = ROOT.TF1("theFunc_%s_ieta%s"%(ts,ieta), funcString, fitRange[0], -0.25)
+            theFunc.SetParameters(0.2, 0.5, -0.01, 0.6)
+            theFunc.SetParNames("norm", "sigma", "theta", "m")
+            theFunc.SetParLimits(1, 0.1, 4)
+            theFunc.SetParLimits(2, -1,0)
+            theFunc.SetParLimits(3, 0.1, 4)
 
-        theFunc.SetParameters(1, -1, 2.5)
-        theFunc.SetParNames("A", "mu", "sigma")
-        theFunc.SetParLimits(1, -0.1,-5)
-        theFunc.SetParLimits(2, 0, 5)
+        elif self.tpPresamples == 2:
+            funcString = "[0]*TMath::BreitWigner(x, [1], [2])"
+            theFunc = ROOT.TF1("theFunc_%s_ieta%s"%(ts,ieta), funcString, fitRange[0], fitRange[1])
+            theFunc.SetParameters(0.2, -1, 1)
+            theFunc.SetParNames("norm", "mean", "gamma")
+            theFunc.SetParLimits(1, -2.5, 2.5)
+            theFunc.SetParLimits(2, 0, 2)
+
+        else:
+            funcString = "gaus(0)"
+            theFunc = ROOT.TF1("theFunc_%s_ieta%s"%(ts,ieta), funcString, fitRange[0], fitRange[1])
+            theFunc.SetParameters(1, 0, 2.5)
+            theFunc.SetParNames("A", "mu", "sigma")
+            theFunc.SetParLimits(1, -2.5,2.5)
+            theFunc.SetParLimits(2, 0, 5)
 
         projHisto.Fit("theFunc_%s_ieta%s"%(ts,ieta), "QMRWL")
 
-        theWeight = theFunc.GetParameter("mu")
-        theWeightErr = theFunc.GetParError(1)
-        sigma = theFunc.GetParameter("sigma")
-        sigmaErr = theFunc.GetParError(2)
+        theWeight = 0; sigma = 0
+        theWeightErr = 0; sigmaErr = 0
+        if ieta >= 21 and self.tpPresamples == 1:
+            theWeight = -math.exp(math.log(theFunc.GetParameter("m")) - theFunc.GetParameter("sigma")**2)
+        elif self.tpPresamples == 2:
+            theWeight = theFunc.GetParameter("mean")
+        else:
+            theWeight = theFunc.GetParameter("mu")
+            sigma = theFunc.GetParameter("sigma")
 
         if save:
             canvas = ROOT.TCanvas("c_%s_%s"%(ieta,ts), "c_%s_%s"%(ieta,ts), 2400, 2400); canvas.cd()
@@ -1562,7 +1514,7 @@ class WeightExtractor:
             ROOT.gPad.SetRightMargin(0.03)
             ROOT.gPad.SetLeftMargin(0.12)
 
-            projHisto.GetXaxis().SetRangeUser(-20,20)
+            projHisto.GetXaxis().SetRangeUser(-10,5)
             projHisto.SetTitle("|ieta| = %d, w_{%d}"%(ieta, ts+1))
             projHisto.GetXaxis().SetTitle("Weight")
             projHisto.GetYaxis().SetTitle("A.U.")
@@ -1579,25 +1531,17 @@ class WeightExtractor:
             theFunc.SetLineWidth(5)
             theFunc.SetLineStyle(7)
 
-            someText = ROOT.TPaveText(0.65, 0.65, 0.95, 0.85, "trNDC")
-            otherText = ROOT.TPaveText(0.15, 0.7, 0.42, 0.85, "trNDC")
+            someText = ROOT.TPaveText(0.2, 0.65, 0.5, 0.85, "trNDC")
 
-            someText.AddText("%s = %3.2f #pm  %3.2f"%(notation,theWeight,theWeightErr))
-            someText.AddText("#sigma = %3.2f #pm  %3.2f"%(sigma,sigmaErr))
+            someText.AddText("Peak = %3.2f"%(theWeight))
             someText.AddText("#chi^{2} / DOF = %3.2f / %d"%(theFunc.GetChisquare(), theFunc.GetNDF()))
             someText.AddText("Entries = %d"%(projHisto.GetEntries()))
-            #otherText.AddText("Under = %d"%(projHisto.GetBinContent(0)))
-            #otherText.AddText("Over = %d"%(projHisto.GetBinContent(projHisto.GetNbinsX()+1)))
-            otherText.SetTextAlign(11)
             someText.SetTextAlign(31)
-
             someText.SetFillColor(ROOT.kWhite);
-            otherText.SetFillColor(ROOT.kWhite);
 
             projHisto.Draw("HIST")
             theFunc.Draw("SAME")
             someText.Draw("SAME")
-            #otherText.Draw("SAME")
     
             canvas.SaveAs("%s/Fits/%d/TS%d_Weight.pdf"%(self.outPath,ieta,ts))
 
@@ -1685,8 +1629,8 @@ if __name__ == '__main__':
             aPath = "%s/Fits/%d"%(outPath,ieta);
             if not os.path.exists(aPath): os.makedirs(aPath)
                 
-    PUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/OOT/OOT.root"
-    noPUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/NOPU/NOPU.root"
+    PUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/Contain/OOT/OOT.root"
+    noPUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/Contain/NOPU/NOPU.root"
 
     theExtractor = WeightExtractor(scheme, PUFile, noPUFile, outPath)
     theExtractor.doInit(fromCache=fromCache)
