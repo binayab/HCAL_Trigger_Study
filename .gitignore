@@ -1,0 +1,8 @@
+condor
+**.root
+**.pyc
+**.pdf
+input
+cmssw
+plots
+temp
