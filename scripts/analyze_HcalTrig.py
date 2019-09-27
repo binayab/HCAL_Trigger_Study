@@ -61,9 +61,9 @@ process.maxEvents = cms.untracked.PSet(
 if inputFile == "OOT":
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmsxroot.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT1.root',
-            'root://cmsxroot.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT2.root',
-            'root://cmsxroot.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT3.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT1.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT2.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-50PU-OOT3.root',
     
         ),
         secondaryFileNames = cms.untracked.vstring(),
@@ -71,7 +71,7 @@ if inputFile == "OOT":
 elif inputFile == "NOPU":
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmsxrootd.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-0PU123.root',
+            'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-0PU123.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
@@ -79,25 +79,6 @@ elif inputFile == "NOPU":
 elif inputFile == "50PU": 
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/C2FD7B09-F941-BD42-AB29-C3E4233A60A8.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/1B8D20FE-65FD-484E-9591-B5EF9025F64A.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/B8C949D2-75D7-EC40-A0AF-6E8CE5B636C5.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/29C59DF4-E379-8A46-9225-4AD096E34B2D.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/7728EE99-30F5-5745-9399-B571D5A9C1A0.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/1E7FF9EC-E676-514B-B596-14EFF93459DC.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/3ADC0D8C-F124-4C42-8256-9DABA8E18B4B.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/9D396CD1-6877-1C45-818C-065F0DCC6679.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/20ABB548-20CD-C747-9651-2B866BD26CC3.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/D8AB293D-0A3C-1E43-B298-B0A0D8A6A0D2.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/0B463A31-161D-584F-A6DA-B16E38A84688.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/83A2AB7B-63D0-5B4A-A179-83E0C80F00D5.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/E77229CD-490D-C44A-B74B-E83A8080377E.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/58998776-8BED-7242-A91F-F14DC8307A91.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/A39EE7C2-4D29-F346-9449-5D67A69C67CF.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/10149E52-5B6C-CE4A-8FAD-9BA2DF4E48BC.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/D7D9FE11-43DD-0045-936B-0FAAFA5525F7.root',
-            #'root://cmsxrootd.fnal.gov///store/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/PU25ns_106X_upgrade2021_realistic_v4-v1/20000/8B4A80CD-AFF2-0B42-9E72-2D4FAB0D88C5.root',
-
             'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/043D2BF4-43C5-614F-BD81-D3C88968DD54.root',
             'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/0FD371C3-32CA-6F4B-BCF4-013E0E73E988.root',
             'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run3Summer19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3-v2/130000/1E38A61E-9906-6C4C-A286-524E5A59FB08.root',
@@ -131,9 +112,9 @@ elif inputFile == "50PU":
 elif inputFile == "DATA":
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/DC207766-1C12-DC44-B679-89EB77C5EE2A.root',
-            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/0B051695-EFBF-3F47-874D-92DE9278FA75.root',
-            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/335207C6-3C98-0848-84D0-0D49FE1B444B.root',
+            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/DC207766-1C12-DC44-B679-89EB77C5EE2A.root', #LS 44
+            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/0B051695-EFBF-3F47-874D-92DE9278FA75.root', #LS 45
+            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/9318ED7A-17EB-6644-9DE8-1FF212666945.root', #LS 49
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )

@@ -47,8 +47,7 @@ def fillMap(pfaKey, inRootDir, theMap):
        for hkey in histoFile.GetListOfKeys():
            if "TH" not in hkey.GetClassName(): continue
 
-           spec = hkey.GetName().find("-")
-           name = hkey.GetName()[spec+1:]
+           name = hkey.GetName()
            histo = hkey.ReadObj()
            histo.SetDirectory(0)
 

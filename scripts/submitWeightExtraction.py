@@ -1,26 +1,15 @@
 #!/usr/bin/env python
 
-import sys, os, ROOT, numpy, argparse, commands, shutil
-from time import strftime
+import sys, os, argparse, shutil, time
 
-date_and_time=strftime("%Y%m%d_%H%M%S")
-
-ROOT.gROOT.SetBatch(True)
-ROOT.gStyle.SetOptStat("")
-ROOT.gStyle.SetLineWidth(2)
-ROOT.gStyle.SetFrameLineWidth(4)
-ROOT.gStyle.SetPaintTextFormat("3.2f")
-ROOT.gStyle.SetErrorX(0)
-ROOT.TH1.SetDefaultSumw2()
+date_and_time=time.strftime("%Y%m%d_%H%M%S")
 
 usage = "usage: %prog [options]"
 parser = argparse.ArgumentParser(usage)
-parser.add_argument("--tag"     , dest="tag"     , help="Unique tag for output"    , type=str, required=True)
-parser.add_argument("--ts2"     , dest="ts2"     , help="Select for min ts2"    , type=int, default=0)
-parser.add_argument("--algo"            , dest="algo"         , help="Which reco scheme" , type=str, required=True)
-parser.add_argument("--basis"            , dest="basis"         , help="Which basis for extraction" , type=str, required=True)
-parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster"   , default=False, action="store_true")
-parser.add_argument("--nJobs", dest="nJobs", help="number of jobs"   , type=int, default=30)
+parser.add_argument("--tag"     , dest="tag"     , help="Unique tag for output"   , type=str     , required=True)
+parser.add_argument("--algo"    , dest="algo"    , help="Which reco scheme"       , type=str     , required=True)
+parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
+parser.add_argument("--nJobs"   , dest="nJobs"   , help="number of jobs"          , type=int     , default=30)
 
 arg = parser.parse_args()
 
@@ -29,21 +18,19 @@ nJobs = arg.nJobs
 eventsPerJob = 9000 / arg.nJobs
 
 exeStub = "python weightExtraction.py"
-exeStub += " --doBatch"
 exeStub += " --algo %s"%(arg.algo)
-exeStub += " --ts2 %d"%(arg.ts2)
 
-taskDir = arg.algo + "_" +arg.basis + "_" + arg.tag + "_" + date_and_time
-outputDir = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/%s/%s/%s/root"%(arg.algo,arg.basis,arg.tag)
+taskDir = arg.algo + "_TP_" + arg.tag + "_" + date_and_time
+outputDir  = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/%s/TP/%s/root"%(arg.algo,arg.tag)
 workingDir = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir)
 
 #subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
-if not os.path.exists(outputDir): os.makedirs(outputDir)
+if not os.path.exists(outputDir):  os.makedirs(outputDir)
 if not os.path.exists(workingDir): os.makedirs(workingDir)
 
 shutil.copy2("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/scripts/weightExtraction.py", "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir))
 
-if outputDir.split("/")[-1] == "": outputDir = outputDir[:-1]
+if outputDir.split("/")[-1] == "":  outputDir  = outputDir[:-1]
 if workingDir.split("/")[-1] == "": workingDir = workingDir[:-1]
 
 # Create directories to save log, submit, and mac files if they don't already exist
