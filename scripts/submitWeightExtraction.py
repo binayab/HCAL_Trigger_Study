@@ -24,11 +24,11 @@ taskDir = arg.algo + "_TP_" + arg.tag + "_" + date_and_time
 outputDir  = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/%s/TP/%s/root"%(arg.algo,arg.tag)
 workingDir = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir)
 
-#subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
 if not os.path.exists(outputDir):  os.makedirs(outputDir)
 if not os.path.exists(workingDir): os.makedirs(workingDir)
 
 shutil.copy2("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/scripts/weightExtraction.py", "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir))
+shutil.copy2("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/scripts/pu2nopuMap.py", "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir))
 
 if outputDir.split("/")[-1] == "":  outputDir  = outputDir[:-1]
 if workingDir.split("/")[-1] == "": workingDir = workingDir[:-1]
@@ -65,7 +65,7 @@ condorSubmit.write("WhenToTransferOutput = ON_EXIT\n")
 condorSubmit.write("Output = %s/logs/$(Cluster)_$(Process).stdout\n"%(workingDir))
 condorSubmit.write("Error = %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
 condorSubmit.write("Log = %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
-condorSubmit.write("Transfer_Input_Files = /uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s/weightExtraction.py\n"%(taskDir))
+condorSubmit.write("Transfer_Input_Files = /uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s/weightExtraction.py, /uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s/pu2nopuMap.py\n"%(taskDir,taskDir))
 condorSubmit.write("x509userproxy = $ENV(X509_USER_PROXY)\n\n")
 
 for iJob in xrange(0,nJobs):

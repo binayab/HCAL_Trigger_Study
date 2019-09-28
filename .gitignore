@@ -6,3 +6,4 @@ input
 cmssw
 plots
 temp
+scripts/pu2nopuMap.py
