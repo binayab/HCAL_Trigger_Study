@@ -12,15 +12,6 @@ ROOT.gStyle.SetErrorX(0)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
 
-usage = "usage: %prog [options]"
-parser = argparse.ArgumentParser(usage)
-parser.add_argument("--tag"       , dest="tag"       , help="Unique tag for output" , type=str     , default="TAG")
-parser.add_argument("--fromCache" , dest="fromCache" , help="Read from cache file"  , default=False, action="store_true")
-parser.add_argument("--algo"      , dest="algo"      , help="Which reco scheme"     , type=str     , default="ALGO")
-parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"      , type=int     , nargs="+", default=[-1,0])
-
-arg = parser.parse_args()
-
 class WeightExtractor:
 
     def __init__(self, scheme, inputFilePU, inputFileNOPU, outputPath):
@@ -400,7 +391,7 @@ class WeightExtractor:
         nopuSums = numpy.matmul(nopuTSMatrix,soiMask)
         puContrib = numpy.subtract(nopuSums, puSums)
 
-        W = numpy.zeros((2,1))
+        W = numpy.array([-999,-999])
         coeffs = 0; sums = 0
         if self.tpPresamples == 1:
             coeffs = puTSMatrix[1][1]
@@ -411,16 +402,11 @@ class WeightExtractor:
 
         # Thus, sums = coeffs x W ===> W = coeffs^-1 x sums
         if self.tpPresamples == 1:
-            W[0] = -999
             try: W[1] = float(sums) / float(coeffs)
-            except:
-                W[1] = -999
-                return W
+            except: return W
         elif self.tpPresamples == 2:
             try: W = numpy.matmul(numpy.linalg.inv(coeffs), sums)
-            except:
-                W[0] = -999; W[1] = -999
-                return 
+            except: return W
 
         if ifPrint: toPrint += "weights: " + str(W) + "\n"
 
@@ -429,6 +415,7 @@ class WeightExtractor:
 
         return W
 
+    # Method for propagating errors in average pulses to average pulse-derived weight(s)
     def getAveragePulseStatError(self, puPulse, nopuPulse, puPulseErrors, nopuPulseErrors):
 
         weightErrors = numpy.zeros((2,1))
@@ -623,6 +610,7 @@ class WeightExtractor:
 
                     if save: self.drawWeightHisto(ieta, depth, iWeight, theWeight, theStatError, systError, rebinHistos[self.rebin], rebinFits[self.rebin])
 
+    # Method for calculating the error on an average weight calculated from an ensemble
     def getAverageError(self, errorDict, det, iWeight):
 
         runningTotal = 0.0
@@ -641,6 +629,7 @@ class WeightExtractor:
 
         return aveError
 
+    # Method for calculating the average weight for HB, HE1 and HE2
     def getSubdetAverageWeights(self, weightDict):
 
         # Keys are detector, iWeight, depth; average over ieta in each detector for each depth 
@@ -678,6 +667,7 @@ class WeightExtractor:
 
         return subdetAverageWeights
 
+    # Method for writing out a text file summarizing all the extracted weights
     def getWeightSummary(self):
 
         aveSummary = open("%s/aveWeightSummary.txt"%(self.outPath), "w")
@@ -750,17 +740,23 @@ class WeightExtractor:
 
 if __name__ == '__main__':
 
-    tag = arg.tag 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tag"       , dest="tag"       , help="Unique tag for output" , type=str     , default="TAG")
+    parser.add_argument("--fromCache" , dest="fromCache" , help="Read from cache file"  , default=False, action="store_true")
+    parser.add_argument("--algo"      , dest="algo"      , help="Which reco scheme"     , type=str     , default="ALGO")
+    parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"      , type=int     , nargs="+", default=[-1,0])
+    
+    arg = parser.parse_args()
+
     gFromCache = arg.fromCache
-    scheme = arg.algo
     eventRange = xrange(arg.evtRange[0], arg.evtRange[0]+arg.evtRange[1]) 
 
-    aPath = ""; outPath = "./plots/Weights/%s/TP/%s"%(scheme,tag)
+    aPath = ""; outPath = "./plots/Weights/%s/TP/%s"%(scheme,arg.tag)
                 
     PUFile   = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/Depth/OOT.root"
     noPUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/Depth/NOPU.root"
 
-    theExtractor = WeightExtractor(scheme, PUFile, noPUFile, outPath)
+    theExtractor = WeightExtractor(arg.algo, PUFile, noPUFile, outPath)
     theExtractor.eventLoop(eventRange)
 
     if gFromCache:
