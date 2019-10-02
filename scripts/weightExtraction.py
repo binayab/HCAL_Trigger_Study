@@ -2,6 +2,7 @@
 
 import sys, os, ROOT, numpy, argparse, math
 from pu2nopuMap import PU2NOPUMAP 
+from collections import defaultdict
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
@@ -39,7 +40,7 @@ class WeightExtractor:
         self.scheme = scheme               # Which algo
         self.ts2Cut = 3                    # Requirement on TS2 (SOI-1) > n ADC
         self.rebin = 2                     # Rebin factor for weight histograms
-        self.ts2Cuts = list(xrange(0,6))   # List of selections on SOI-1 to make
+        self.ts2Cuts = list(xrange(0,5))   # List of selections on SOI-1 to make
         self.depths = list(xrange(0,7))    # List of all possible depths (not all for any given ieta!)
         self.iWeights = list(xrange(1,3))  # List of i weights 
 
@@ -67,33 +68,25 @@ class WeightExtractor:
             self.nevents = self.ttreepu.GetEntriesFast()
 
             for depth in self.depths:
-                self.ietaDensity[depth] = ROOT.TH1F("d%d_nTPs"%(depth), "d%d_nTPs"%(depth), 28, 0.5, 28.5)
-                self.corrHistos[depth] = {}
-                self.pulseShapesPU[depth] = {}
-                self.pulseShapesNOPU[depth] = {}
-                self.weightHistos[depth] = {}
-                self.fitWeights[depth] = {}
-                self.statErrors[depth] = {}
-                self.systErrors[depth] = {}
-                self.averagePulseStatErrors[depth] = {}
-                self.averagePulseSystErrors[depth] = {}
+                for ts2Cut in self.ts2Cuts:
+                    self.ietaDensity.setdefault(depth, {}).setdefault(ts2Cut, ROOT.TH1F("depth%d_nTPs_TS2gt%d"%(depth,ts2Cut), "depth%d_nTPs_TS2gt%d"%(depth,ts2Cut), 28, 0.5, 28.5))
 
                 for ieta in self.HBHEieta:
-                    iname = "i%d_d%d"%(ieta,depth)
-                    self.weightHistos[depth][ieta] = {}
-                    self.fitWeights[depth][ieta] = {}
-                    self.corrHistos[depth][ieta] = ROOT.TH2F(iname+"_wcorr", iname+"_wcorr", 360, -50.0, 50.0, 360, -50.0, 50.0)
-                    self.pulseShapesPU[depth][ieta] = {} 
-                    self.pulseShapesNOPU[depth][ieta] = {} 
-
+                    iname = "ieta%d_depth%d"%(ieta,depth)
                     for ts2Cut in self.ts2Cuts:
-                        tname = iname+"_TS2gt%d"%(ts2Cut)
-                        self.pulseShapesPU[depth][ieta][ts2Cut] = ROOT.TH2F(tname+"_pulsePU", tname+"_pulsePU", 8, -3.5, 4.5, 2048, -0.5, 2047.5)
-                        self.pulseShapesNOPU[depth][ieta][ts2Cut] = ROOT.TH2F(tname+"_pulseNOPU", tname+"_pulseNOPU", 8, -3.5, 4.5, 2048, -0.5, 2047.5)
+                        tname = iname+"_wcorr_TS2gt%d"%(ts2Cut)
+                        self.corrHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, ROOT.TH2F(tname, tname, 360, -50.0, 50.0, 360, -50.0, 50.0))
 
                     for weight in self.iWeights:
                         wname = iname+"_w%d"%(weight)
-                        self.weightHistos[depth][ieta][weight] = ROOT.TH1F(wname, wname, 720, -50.0, 50.0)
+                        for ts2Cut in self.ts2Cuts:
+                            tname = wname+"_TS2gt%d"%(ts2Cut)
+                            self.weightHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(weight, {}).setdefault(ts2Cut, ROOT.TH1F(tname, tname, 720, -50.0, 50.0))
+
+                    for ts2Cut in self.ts2Cuts:
+                        tname1 = iname+"_pulsePU_TS2gt%d"%(ts2Cut); tname2 = iname+"_pulseNOPU_TS2gt%d"%(ts2Cut)
+                        self.pulseShapesPU.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, ROOT.TH2F(tname1, tname1, 8, -3.5, 4.5, 2049, -0.5, 2048.5))
+                        self.pulseShapesNOPU.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, ROOT.TH2F(tname2, tname2, 8, -3.5, 4.5, 2049, -0.5, 2048.5))
 
     def eventLoop(self, eventRange): 
 
@@ -111,13 +104,6 @@ class WeightExtractor:
 
         print "Constructing per-ieta, per-event 8TS pulses"
         for iEvent in eventRange:
-
-            nTPsPUmap   = {}; pulseMapPU   = {}
-            nTPsNOPUmap = {}; pulseMapNOPU = {}
-
-            for ieta in self.HBHEieta:
-                pulseMapPU[ieta]   = numpy.zeros((8,1)); nTPsPUmap[ieta] = 0  
-                pulseMapNOPU[ieta] = numpy.zeros((8,1)); nTPsNOPUmap[ieta] = 0
 
             self.ttreepu.GetEntry(iEvent)
             self.ttreenopu.GetEntry(PU2NOPUMAP[self.ttreepu.event])
@@ -206,13 +192,14 @@ class WeightExtractor:
                                         self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 2, self.ttreepu.ts5[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill( 2, self.ttreenopu.ts5[jTP])
                                         self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 3, self.ttreepu.ts6[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill( 3, self.ttreenopu.ts6[jTP])
                                         self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 4, self.ttreepu.ts7[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill( 4, self.ttreenopu.ts7[jTP])
+                                        self.ietaDensity[idepth][ts2Cut].Fill(abs(ieta))
 
-                                if self.ttreepu.ts2[iTP] > self.ts2Cut:
-                                    self.ietaDensity[idepth].Fill(abs(ieta))
-                                    weights = self.extractWeights(puPulse, nopuPulse)
+                                        weights = self.extractWeights(puPulse, nopuPulse)
 
-                                    for ts in xrange(0, weights.size): self.weightHistos[idepth][abs(ieta)][ts+1].Fill(weights[ts])
-                                    self.corrHistos[idepth][abs(ieta)].Fill(weights[0], weights[1])
+                                        print weights
+
+                                        for ts in xrange(0, weights.size): self.weightHistos[idepth][abs(ieta)][ts+1][ts2Cut].Fill(weights[ts])
+                                        self.corrHistos[idepth][abs(ieta)][ts2Cut].Fill(weights[0], weights[1])
 
                                 hotStart = jTP
                                 break
@@ -229,17 +216,17 @@ class WeightExtractor:
         # After looping over all events, write out all the histograms to the cache file
         for depth in xrange(0,7):
             for ieta in self.HBHEieta:
-                self.corrHistos[depth][ieta].Write(self.corrHistos[depth][ieta].GetName())
-                
                 for ts2Cut in self.ts2Cuts:
                     self.pulseShapesNOPU[depth][ieta][ts2Cut].Write(self.pulseShapesNOPU[depth][ieta][ts2Cut].GetName())
                     self.pulseShapesPU[depth][ieta][ts2Cut].Write(self.pulseShapesPU[depth][ieta][ts2Cut].GetName())
+                    self.corrHistos[depth][ieta][ts2Cut].Write(self.corrHistos[depth][ieta][ts2Cut].GetName())
 
-                for iWeight in self.iWeights:
-                    self.weightHistos[depth][ieta][iWeight].Write(self.weightHistos[depth][ieta][iWeight].GetName())
+                    for iWeight in self.iWeights:
+                        self.weightHistos[depth][ieta][iWeight][ts2Cut].Write(self.weightHistos[depth][ieta][iWeight][ts2Cut].GetName())
 
-        for depth, histo in self.ietaDensity.iteritems():
-            histo.Write(histo.GetName())
+        for depth, ts2Dict in self.ietaDensity.iteritems():
+            for ts2Cut, histo in ts2Dict.iteritems():
+                histo.Write(histo.GetName())
 
         outfile.Close()
     
@@ -256,58 +243,34 @@ class WeightExtractor:
             for key in f.GetListOfKeys():
                 obj = key.ReadObj(); obj.SetDirectory(0)
                 keyName = str(key.GetName()); chunks = keyName.split("_")
-                ieta = -99; depth = -99
-                if len(chunks) >= 3:
 
-                    ieta = int(chunks[0].split("i")[1]); depth = int(chunks[1].split("d")[1]);
+                if "wcorr" in keyName:
+                    ieta = int(chunks[0].split("ieta")[1]); depth = int(chunks[1].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1])
+                    self.corrHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, obj)
 
-                    if depth not in self.pulseShapesNOPU: self.pulseShapesNOPU[depth] = {ieta : {}}
-                    if depth not in self.pulseShapesPU: self.pulseShapesPU[depth] = {ieta : {}}
-                    if depth not in self.corrHistos: self.corrHistos[depth] = {}
-                    if depth not in self.weightHistos: self.weightHistos[depth] = {ieta : {}}
-                    if depth not in self.fitWeights: self.fitWeights[depth] = {ieta : {}}
-                    if depth not in self.statErrors: self.statErrors[depth] = {ieta : {}}
-                    if depth not in self.systErrors: self.systErrors[depth] = {ieta : {}}
-                    if depth not in self.averagePulseStatErrors: self.averagePulseStatErrors[depth] = {ieta : {}}
-                    if depth not in self.averagePulseSystErrors: self.averagePulseSystErrors[depth] = {ieta : {}}
-
-                    if ieta not in self.weightHistos[depth]: self.weightHistos[depth][ieta] = {}
-                    if ieta not in self.fitWeights[depth]: self.fitWeights[depth][ieta] = {}
-                    if ieta not in self.statErrors[depth]: self.statErrors[depth][ieta] = {}
-                    if ieta not in self.systErrors[depth]: self.systErrors[depth][ieta] = {}
-                    if ieta not in self.averagePulseStatErrors[depth]: self.averagePulseStatErrors[depth][ieta] = {}
-                    if ieta not in self.averagePulseSystErrors[depth]: self.averagePulseSystErrors[depth][ieta] = {}
-                    if ieta not in self.pulseShapesNOPU[depth]: self.pulseShapesNOPU[depth][ieta] = {}
-                    if ieta not in self.pulseShapesPU[depth]: self.pulseShapesPU[depth][ieta] = {}
-
-                else:
-                    depth = int(chunks[0].split("d")[1])
-
-                if "nTPs" in keyName: self.ietaDensity[depth] = obj
-                elif "pulseNOPU" in keyName:
-                    tsCut = int(chunks[2].split("TS2gt")[1])
-                    self.pulseShapesNOPU[depth][ieta][tsCut] = obj
-                elif "pulsePU" in keyName:
-                    tsCut = int(chunks[2].split("TS2gt")[1])
-                    self.pulseShapesPU[depth][ieta][tsCut] = obj
-                elif "wcorr" in keyName: self.corrHistos[depth][ieta] = obj
                 elif "w" in keyName:
-                    weight = int(chunks[2].split("w")[1])
-                    self.weightHistos[depth][ieta][weight] = obj
+                    ieta = int(chunks[0].split("ieta")[1]); depth = int(chunks[1].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1]); weight = int(chunks[-2].split("w")[1])
+                    self.weightHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(weight, {}).setdefault(ts2Cut, obj)
+
+                elif "nTPs" in keyName:
+                    depth = int(chunks[0].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1])
+                    self.ietaDensity.setdefault(depth, {}).setdefault(ts2Cut, obj)
+
+                elif "pulsePU" in keyName:
+                    ieta = int(chunks[0].split("ieta")[1]); depth = int(chunks[1].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1])
+                    self.pulseShapesPU.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, obj)
+
+                elif "pulseNOPU" in keyName:
+                    ieta = int(chunks[0].split("ieta")[1]); depth = int(chunks[1].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1])
+                    self.pulseShapesNOPU.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, obj)
+
             f.Close()
 
     # Method for extracting weights based on the average pulse shape in each ieta ring, depth
     def extractAveragePulseWeights(self):
 
         for depth in self.depths:
-
-            self.averagePulseWeights[depth] = {}
             for ieta in self.HBHEieta:
-
-                self.averagePulseWeights[depth][ieta] = {}
-                for iWeight in self.iWeights:
-                    self.averagePulseWeights[depth][ieta][iWeight] = {}
-
                 for ts2Cut in self.ts2Cuts:
 
                     puPulse   = numpy.zeros((8,1)); puPulseErrors   = numpy.zeros((8,1))
@@ -325,12 +288,11 @@ class WeightExtractor:
                         nopuPulseErrors[ts] = aveNOPUpulse.GetBinError(ts+1)
 
                     weights = self.extractWeights(puPulse, nopuPulse)
-                    for ts in xrange(0, weights.size): self.averagePulseWeights[depth][ieta][ts+1][ts2Cut] = weights[ts]
+                    for ts in xrange(0, weights.size): self.averagePulseWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts+1, {}).setdefault(ts2Cut, weights[ts])
 
-                    if ts2Cut == 3:
-                        weightErrors = self.getAveragePulseStatError(puPulse, nopuPulse, puPulseErrors, nopuPulseErrors)
-                        self.averagePulseStatErrors[depth][ieta][1] = weightErrors[0]
-                        self.averagePulseStatErrors[depth][ieta][2] = weightErrors[1]
+                    weightErrors = self.getAveragePulseStatError(puPulse, nopuPulse, puPulseErrors, nopuPulseErrors)
+                    self.averagePulseStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(1, {}).setdefault(ts2Cut, weightErrors[0])
+                    self.averagePulseStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(2, {}).setdefault(ts2Cut, weightErrors[1])
 
                 for iWeight in self.iWeights:
 
@@ -340,8 +302,9 @@ class WeightExtractor:
                         if self.averagePulseWeights[depth][ieta][iWeight][ts2Cut] != -999:
                             averagePulseWeights.append(self.averagePulseWeights[depth][ieta][iWeight][ts2Cut])
                     
-                    if averagePulseWeights == []: self.averagePulseSystErrors[depth][ieta][iWeight] = -999
-                    else: self.averagePulseSystErrors[depth][ieta][iWeight] = numpy.std(averagePulseWeights)
+                    for ts2Cut in self.ts2Cuts:
+                        if averagePulseWeights == []: self.averagePulseSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                        else: self.averagePulseSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, numpy.std(averagePulseWeights))
 
     def extractWeights(self, puPulse, nopuPulse):
 
@@ -349,7 +312,7 @@ class WeightExtractor:
         if numpy.count_nonzero(nopuPulse) == 0 or numpy.count_nonzero(puPulse) == 0: 
 
             weights = numpy.zeros((2,1))
-            weights[0] = -999; weights[1] = -999
+            weights[0] = -999.0; weights[1] = -999.0
 
             return weights
 
@@ -391,7 +354,7 @@ class WeightExtractor:
         nopuSums = numpy.matmul(nopuTSMatrix,soiMask)
         puContrib = numpy.subtract(nopuSums, puSums)
 
-        W = numpy.array([-999,-999])
+        W = numpy.array([-999.0,-999.0])
         coeffs = 0; sums = 0
         if self.tpPresamples == 1:
             coeffs = puTSMatrix[1][1]
@@ -486,7 +449,7 @@ class WeightExtractor:
         for depth in self.depths:
             for ieta in self.HBHEieta:
 
-                histo = self.corrHistos[depth][ieta]
+                histo = self.corrHistos[depth][ieta][self.ts2Cut]
 
                 # No need to print out empty plot (for ieta, depth that don't exist...)
                 if histo.Integral() == 0: continue
@@ -518,9 +481,9 @@ class WeightExtractor:
                 canvas.SaveAs(outPath + "/WeightCorrelation.pdf")
 
     # Method for drawing histogram of an extracted weight with its fit
-    def drawWeightHisto(self, ieta, depth, iWeight, weight, statError, systError, weightHisto, histoFit):
+    def drawWeightHisto(self, ieta, depth, iWeight, ts2Cut, weight, statError, systError, weightHisto, histoFit):
 
-        canvas = ROOT.TCanvas("c_i%d_d%d_w%d"%(ieta,depth,iWeight), "c_i%d_d%d_w%d"%(ieta,depth,iWeight), 2400, 2400); canvas.cd()
+        canvas = ROOT.TCanvas("c_i%d_d%d_w%d_TS2gt%d"%(ieta,depth,iWeight,ts2Cut), "c_i%d_d%d_w%d_TS2gt%d"%(ieta,depth,iWeight,ts2Cut), 2400, 2400); canvas.cd()
         canvas.SetGridx()
         canvas.SetGridy()
         ROOT.gPad.SetRightMargin(0.03)
@@ -554,118 +517,127 @@ class WeightExtractor:
         histoFit.Draw("SAME")
         someText.Draw("SAME")
     
-        outPath = "%s/Fits/ieta%d/depth%d/SOI-%d"%(self.outPath,ieta,depth,3-iWeight)
+        outPath = "%s/Fits/ieta%d/depth%d/SOI-%d/TS2gt%d"%(self.outPath,ieta,depth,3-iWeight,ts2Cut)
         if not os.path.exists(outPath): os.makedirs(outPath)
         canvas.SaveAs(outPath + "/WeightDistribution.pdf")
 
     # Method for getting weights from fit of weight distribution
-    def extractFitWeights(self, ieta, depth, iWeight, save=False):
+    def extractFitWeights(self, save=False):
 
         for iWeight in self.iWeights:
             for depth in self.depths:
                 for ieta in self.HBHEieta:
+                    for ts2Cut in self.ts2Cuts:
 
-                    histo = self.weightHistos[depth][ieta][iWeight]
-                    if histo.Integral() == 0:
-                        self.fitWeights[depth][ieta][iWeight] = -999 
-                        self.statErrors[depth][ieta][iWeight] = -999 
-                        self.systErrors[depth][ieta][iWeight] = -999 
-                        return
+                        histo = self.weightHistos[depth][ieta][iWeight][ts2Cut]
+                        if histo.Integral() == 0:
+                            self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                            self.statErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                            self.systErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                            continue 
 
-                    numEntries = float(histo.GetEntries())
-                    histo.Scale(1./histo.Integral())
+                        numEntries = float(histo.GetEntries())
+                        histo.Scale(1./histo.Integral())
 
-                    # Keys of these dictionaries correspond to rebinnings
-                    rebinHistos     = {0 : 0, 1 : 0, 2 : 0, 3 : 0, 4 : 0}
-                    rebinFits       = {0 : 0, 1 : 0, 2 : 0, 3 : 0, 4 : 0}
-                    rebinWeights    = numpy.zeros((5,1))
-                    rebinStatErrors = numpy.zeros((5,1)) 
-                    for rebin in rebinHistos.keys(): rebinHistos[rebin] = histo.Rebin(rebin+1, "r%d_i%d_d%d_w%d"%(rebin,ieta,depth,iWeight))
+                        # Keys of these dictionaries correspond to rebinnings
+                        rebinHistos     = {1 : 0, 2 : 0, 3 : 0, 4 : 0}
+                        rebinFits       = {1 : 0, 2 : 0, 3 : 0, 4 : 0}
+                        rebinWeights    = numpy.zeros((5,1))
+                        rebinStatErrors = numpy.zeros((5,1)) 
+                        for rebin in rebinHistos.keys(): rebinHistos[rebin] = histo.Rebin(rebin+1, "r%d_i%d_d%d_w%d_TS2gt%d"%(rebin,ieta,depth,iWeight,ts2Cut))
 
-                    for rebin, rHisto in rebinHistos.iteritems():
-                        binmax = rHisto.GetMaximumBin(); xmax = rHisto.GetBinCenter(binmax); binWidth = rHisto.GetBinWidth(1)
-                        name = "f_i%d_d%d_r%d_w%d"%(ieta,depth,rebin,iWeight); funcString = "gaus(0)"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
+                        for rebin, rHisto in rebinHistos.iteritems():
+                            binmax = rHisto.GetMaximumBin(); xmax = rHisto.GetBinCenter(binmax); binWidth = rHisto.GetBinWidth(1)
+                            name = "f_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString = "gaus(0)"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
 
-                        theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
-                        theFunc.SetParameters(0.2, 0, 2.5)
-                        theFunc.SetParNames("A", "mu", "sigma")
-                        theFunc.SetParLimits(1, -2.5,2.5)
-                        theFunc.SetParLimits(2, 0, 5)
+                            theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
+                            theFunc.SetParameters(0.2, 0, 2.5)
+                            theFunc.SetParNames("A", "mu", "sigma")
+                            theFunc.SetParLimits(0, 0.0, 1.0)
+                            theFunc.SetParLimits(1, -2.5,2.5)
+                            theFunc.SetParLimits(2, 0.0, 5.0)
 
-                        rHisto.Fit(name, "QMRWL")
+                            rHisto.Fit(name, "QMRWL")
 
-                        rebinWeights[rebin-1] = theFunc.GetParameter("mu")
-                        meanError = theFunc.GetParameter("sigma")
+                            rebinWeights[rebin-1] = theFunc.GetParameter("mu")
+                            meanError = theFunc.GetParameter("sigma")
 
-                        rebinFits[rebin-1] = theFunc
-                        rebinStatErrors[rebin-1] = meanError / math.sqrt(numEntries) 
+                            rebinFits[rebin-1] = theFunc
+                            rebinStatErrors[rebin-1] = meanError / math.sqrt(numEntries) 
 
-                    theWeight = rebinWeights[self.rebin-1]; theStatError = rebinStatErrors[self.rebin-1]
+                        theWeight = rebinWeights[self.rebin-1]; theStatError = rebinStatErrors[self.rebin-1]
 
-                    # From the five different fits the histogram determine the standard dev of the weights 
-                    systError = numpy.std(rebinWeights)
-                    self.fitWeights[depth][ieta][iWeight] = theWeight
-                    self.statErrors[depth][ieta][iWeight] = theStatError 
-                    self.systErrors[depth][ieta][iWeight] = systError
+                        # From the five different fits the histogram determine the standard dev of the weights 
+                        theSystError = numpy.std(rebinWeights)
+                        self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theWeight)
+                        self.statErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theStatError)
+                        self.systErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theSystError)
 
-                    if save: self.drawWeightHisto(ieta, depth, iWeight, theWeight, theStatError, systError, rebinHistos[self.rebin], rebinFits[self.rebin])
+                        if save: self.drawWeightHisto(ieta, depth, iWeight, ts2Cut, theWeight, theStatError, theSystError, rebinHistos[self.rebin], rebinFits[self.rebin])
 
-    # Method for calculating the error on an average weight calculated from an ensemble
-    def getAverageError(self, errorDict, det, iWeight):
+    # Method for calculating the averaged-over-depth weight for each ieta and average-over-depth for HB, HE1, HE2
+    def getDepthAverageWeightsAndErrors(self, weightDict, statErrorDict, systErrorDict):
 
-        runningTotal = 0.0
+        # Intialize some temporary dictionaries
+        depthAverageWeights = {}; depthAverageStatErrors = {}; depthAverageSystErrors = {}
+        ietaDensityDepthSum = {}
+        for ieta in self.HBHEieta:
+            ietaDensityDepthSum[ieta] = 0 
+            for iWeight in self.iWeights:
+                depthAverageWeights.setdefault(ieta, {}).setdefault(iWeight, 0.0)
+                depthAverageStatErrors.setdefault(ieta, {}).setdefault(iWeight, 0.0)
+                depthAverageSystErrors.setdefault(ieta, {}).setdefault(iWeight, 0.0)
 
-        for ieta in errorDict.keys():
-            
-            if errorDict[ieta][iWeight] == -999 or errorDict[ieta][iWeight] == 0.0: continue
+        subDetDepthAverageWeights = {"HB" : {}, "HE1" : {}, "HE2" : {}}; subDetDepthAverageStatErrors = {"HB" : {}, "HE1" : {}, "HE2" : {}}; subDetDepthAverageSystErrors = {"HB" : {}, "HE1" : {}, "HE2" : {}}
+        subDetDensity = {"HB" : 0, "HE1" : 0, "HE2" : 0}
+        for det, wDict in subDetDepthAverageWeights.iteritems():
+            for iWeight in self.iWeights:
+                subDetDepthAverageWeights[det][iWeight] = 0.0 
+                subDetDepthAverageStatErrors[det][iWeight] = 0.0 
+                subDetDepthAverageSystErrors[det][iWeight] = 0.0 
 
-            if ieta in self.HBieta  and det == "HB":  runningTotal += 1.0 / errorDict[ieta][iWeight]**2
-            if ieta in self.HE1ieta and det == "HE1": runningTotal += 1.0 / errorDict[ieta][iWeight]**2
-            if ieta in self.HE2ieta and det == "HE2": runningTotal += 1.0 / errorDict[ieta][iWeight]**2
-
-        if runningTotal == 0.0: return 0.0
-
-        aveError = 1.0 / math.sqrt(runningTotal)
-
-        return aveError
-
-    # Method for calculating the average weight for HB, HE1 and HE2
-    def getSubdetAverageWeights(self, weightDict):
-
-        # Keys are detector, iWeight, depth; average over ieta in each detector for each depth 
-        subdetAverageWeights = {"HB" : {}, "HE1" : {}, "HE2" : {}};
-       
-        # Setup maps for average weights and extract the weights from fits
-        for iWeight in self.iWeights:
-            subdetAverageWeights["HB"][iWeight] =  [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            subdetAverageWeights["HE1"][iWeight] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-            subdetAverageWeights["HE2"][iWeight] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-
+        # Sum over the depths of each ieta to calculate the total TPs in that ieta
         for depth in self.depths:
-            
-            # Empty ietaDensity means we aren't looking at this depth...
-            if self.ietaDensity[depth].GetEntries() == 0: continue
-
-            tpsHB  = self.ietaDensity[depth].Integral(1,16)
-            tpsHE1 = self.ietaDensity[depth].Integral(17,20)
-            tpsHE2 = self.ietaDensity[depth].Integral(21,28)
-
             for ieta in self.HBHEieta:
+
+                ietaDensityDepthSum[ieta] += self.ietaDensity[depth][self.ts2Cut].GetBinContent(ieta)
+                if   ieta in self.HBieta:  subDetDensity["HB"]  += self.ietaDensity[depth][self.ts2Cut].GetBinContent(ieta) 
+                elif ieta in self.HE1ieta: subDetDensity["HE1"] += self.ietaDensity[depth][self.ts2Cut].GetBinContent(ieta) 
+                elif ieta in self.HE2ieta: subDetDensity["HE2"] += self.ietaDensity[depth][self.ts2Cut].GetBinContent(ieta) 
+
+        # Now compute summed-over-depth average weight for each ieta
+        for depth in self.depths:
+            for ieta in self.HBHEieta:
+                depthTPs = self.ietaDensity[depth][self.ts2Cut].GetBinContent(ieta)
+
+                # Empty ietaDensity means we aren't looking at this depth...
+                if depthTPs == 0: continue
+
                 for iWeight in weightDict[depth][ieta].keys():
 
                     # Not very clean way of getting weight from extra dictionary or not
-                    weight = 0
-                    if type(weightDict[depth][ieta][iWeight]) is dict: weight = weightDict[depth][ieta][iWeight][self.ts2Cut]
-                    else: weight = weightDict[depth][ieta][iWeight]
+                    weight = weightDict[depth][ieta][iWeight][self.ts2Cut]
+                    statError = statErrorDict[depth][ieta][iWeight][self.ts2Cut]
+                    systError = systErrorDict[depth][ieta][iWeight][self.ts2Cut]
 
-                    if weight == -999: continue 
+                    if weight == -999: continue
 
-                    ietaTPs = float(self.ietaDensity[depth].GetBinContent(ieta))
-                    if   ieta in self.HBieta:  subdetAverageWeights["HB"][iWeight][depth]  += weight * ietaTPs / float(tpsHB) 
-                    elif ieta in self.HE1ieta: subdetAverageWeights["HE1"][iWeight][depth] += weight * ietaTPs / float(tpsHE1) 
-                    elif ieta in self.HE2ieta: subdetAverageWeights["HE2"][iWeight][depth] += weight * ietaTPs / float(tpsHE2) 
+                    depthAverageWeights[ieta][iWeight] += weight * depthTPs / float(ietaDensityDepthSum[ieta])
+                    if   ieta in self.HBieta:  subDetDepthAverageWeights["HB"][iWeight]  += weight * depthTPs / float(subDetDensity["HB"])
+                    elif ieta in self.HE1ieta: subDetDepthAverageWeights["HE1"][iWeight] += weight * depthTPs / float(subDetDensity["HE1"]) 
+                    elif ieta in self.HE2ieta: subDetDepthAverageWeights["HE2"][iWeight] += weight * depthTPs / float(subDetDensity["HE2"]) 
 
-        return subdetAverageWeights
+                    depthAverageStatErrors[ieta][iWeight] += statError * depthTPs / float(ietaDensityDepthSum[ieta])
+                    if   ieta in self.HBieta:  subDetDepthAverageStatErrors["HB"][iWeight]  += statError * depthTPs / float(subDetDensity["HB"])
+                    elif ieta in self.HE1ieta: subDetDepthAverageStatErrors["HE1"][iWeight] += statError * depthTPs / float(subDetDensity["HE1"]) 
+                    elif ieta in self.HE2ieta: subDetDepthAverageStatErrors["HE2"][iWeight] += statError * depthTPs / float(subDetDensity["HE2"]) 
+
+                    depthAverageSystErrors[ieta][iWeight] += systError * depthTPs / float(ietaDensityDepthSum[ieta])
+                    if   ieta in self.HBieta:  subDetDepthAverageSystErrors["HB"][iWeight]  += systError * depthTPs / float(subDetDensity["HB"])
+                    elif ieta in self.HE1ieta: subDetDepthAverageSystErrors["HE1"][iWeight] += systError * depthTPs / float(subDetDensity["HE1"]) 
+                    elif ieta in self.HE2ieta: subDetDepthAverageSystErrors["HE2"][iWeight] += systError * depthTPs / float(subDetDensity["HE2"]) 
+
+        return depthAverageWeights, subDetDepthAverageWeights, depthAverageStatErrors, depthAverageSystErrors, subDetDepthAverageStatErrors, subDetDepthAverageSystErrors
 
     # Method for writing out a text file summarizing all the extracted weights
     def getWeightSummary(self):
@@ -673,8 +645,12 @@ class WeightExtractor:
         aveSummary = open("%s/aveWeightSummary.txt"%(self.outPath), "w")
         summary = open("%s/weightSummary.txt"%(self.outPath), "w")
 
-        averagePulseSubdetWeights = self.getSubdetAverageWeights(self.averagePulseWeights)
-        subdetWeights = self.getSubdetAverageWeights(self.fitWeights)
+        depthAverageWeights, subdetDepthAverageWeights, depthAverageStatErrors, \
+        depthAverageSystErrors, subdetDepthAverageStatErrors, subdetDepthAverageSystErrors = self.getDepthAverageWeightsAndErrors(self.fitWeights, self.statErrors, self.systErrors)
+
+        averagePulseDepthAverageWeights, averagePulseSubdetDepthAverageWeights, averagePulseDepthAverageStatErrors, \
+        averagePulseDepthAverageSystErrors, averagePulseSubdetDepthAverageStatErrors, averagePulseSubdetDepthAverageSystErrors \
+        = self.getDepthAverageWeightsAndErrors(self.averagePulseWeights, self.averagePulseStatErrors, self.averagePulseSystErrors)
 
         for depth in self.depths:
             str2Write = "\nDepth %d:\n"%(depth); str2WriteAve = "\nDepth %d:\n"%(depth)
@@ -686,56 +662,76 @@ class WeightExtractor:
                 str2WriteAve += "ieta: %s   "%(ietaStr)
                 for iWeight in reversed(self.averagePulseWeights[depth][ieta].keys()):
                     if self.averagePulseWeights[depth][ieta][iWeight][self.ts2Cut] == -999:
-                        str2WriteAve += ". . . . . . . . . . . . . . . . . . . . . . .   " 
+                        str2WriteAve += ". . . . . . . . . . . . . . . .   " 
                     else:
                         weightStr = "%3.2f"%(self.averagePulseWeights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
-                        str2WriteAve += "wSOI-%d: %s +/- %3.2f (stat.) +/- %3.2f (sys.)  "%(3-iWeight,weightStr,self.averagePulseStatErrors[depth][ieta][iWeight],self.averagePulseSystErrors[depth][ieta][iWeight])
+                        statError = self.averagePulseStatErrors[depth][ieta][iWeight][self.ts2Cut]
+                        systError = self.averagePulseSystErrors[depth][ieta][iWeight][self.ts2Cut]
+                        str2WriteAve += "wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError)
                 str2WriteAve += "\n"
 
                 str2Write += "ieta: %s   "%(ietaStr)
                 for iWeight in reversed(self.fitWeights[depth][ieta].keys()):
-                    if self.fitWeights[depth][ieta][iWeight] == -999: 
-                        str2Write += ". . . . . . . . . . . . . . . . . . . . . . .   " 
+                    if self.fitWeights[depth][ieta][iWeight][self.ts2Cut] == -999: 
+                        str2Write += ". . . . . . . . . . . . . . . . . . .   " 
                     else: 
-                        weightStr = "%3.2f"%(self.fitWeights[depth][ieta][iWeight]); weightStr = weightStr.rjust(5)
-                        str2Write += "wSOI-%d: %s +/- %3.2f (stat.) +/- %3.2f (sys.)  "%(3-iWeight,weightStr,self.statErrors[depth][ieta][iWeight],self.systErrors[depth][ieta][iWeight])
+                        weightStr = "%3.2f"%(self.fitWeights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
+                        statError = self.statErrors[depth][ieta][iWeight][self.ts2Cut]
+                        systError = self.systErrors[depth][ieta][iWeight][self.ts2Cut]
+                        str2Write += "wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError)
                 str2Write += "\n"
 
             aveSummary.write(str2WriteAve)
             summary.write(str2Write)
 
         summary.write("\n\n"); aveSummary.write("\n\n")
-        for det, weightDict in subdetWeights.iteritems():
+        for ieta, weightDict in depthAverageWeights.iteritems():
+            ietaStr = "%d"%(ieta)
+            ietaStr = ietaStr.rjust(2)
+            summary.write("ieta: %s   "%(ietaStr)); aveSummary.write("ieta: %s   "%(ietaStr));
 
-            summary.write("%s:   \n"%(det)); aveSummary.write("%s:   \n"%(det))
-            for iWeight in reversed(weightDict.keys()): 
+            for iWeight in reversed(weightDict.keys()):
+                if weightDict[iWeight] == -999:
+                    summary.write(". . . . . . . . . . . . . . . . . . . .  ")
+                else:
+                    statError = depthAverageStatErrors[ieta][iWeight]
+                    systError = depthAverageSystErrors[ieta][iWeight]
+                    weightStr = "%3.2f"%(weightDict[iWeight]); weightStr = weightStr.rjust(5)
+                    summary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
 
-                summary.write("wSOI-%d   "%(3-iWeight))
-                aveSummary.write("wSOI-%d   "%(3-iWeight))
-                for iDepth in xrange(len(weightDict[iWeight])):
+                if averagePulseDepthAverageWeights[ieta][iWeight] == -999:
+                     aveSummary.write(". . . . . . . . . . . . . . . . . .  ")
+                else:
+                    statError = averagePulseDepthAverageStatErrors[ieta][iWeight]
+                    systError = averagePulseDepthAverageSystErrors[ieta][iWeight]
+                    weightStr = "%3.2f"%(averagePulseDepthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
+                    aveSummary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
+            summary.write("\n"); aveSummary.write("\n")
 
-                    if iDepth == 0: continue
-                    # No real average set, no need to print...
-                    if weightDict[iWeight][iDepth] != 0.0:
-                        aveStatError = self.getAverageError(self.statErrors[iDepth], det, iWeight)
-                        aveSystError = self.getAverageError(self.systErrors[iDepth], det, iWeight)
-                        summary.write("Depth %d: %3.2f +/- %3.2f (stat.) +/- %3.2f (sys.)   "%(iDepth,weightDict[iWeight][iDepth],aveStatError,aveSystError))
-                    else:
-                        summary.write(". . . . . . . . . . . . . . . . . . . . . . . .   ")
+        summary.write("\n\n"); aveSummary.write("\n\n")
+        for det, weightDict in subdetDepthAverageWeights.iteritems():
+            detStr = "%s"%(det)
+            detStr = detStr.rjust(3)
+            summary.write("%s:   "%(detStr)); aveSummary.write("%s:   "%(detStr));
 
-                    if averagePulseSubdetWeights[det][iWeight][iDepth] != 0.0:
-                        aveStatError = self.getAverageError(self.averagePulseStatErrors[iDepth], det, iWeight) 
-                        aveSystError = self.getAverageError(self.averagePulseSystErrors[iDepth], det, iWeight) 
-                        aveSummary.write("Depth %d: %3.2f +/- %3.2f (stat.) +/- %3.2f (sys.)   "%(iDepth, averagePulseSubdetWeights[det][iWeight][iDepth], aveStatError, aveSystError))
-                    else:
-                        aveSummary.write(". . . . . . . . . . . . . . . . . . . . . . . .   ")
+            for iWeight in reversed(weightDict.keys()):
+                if weightDict[iWeight] == -999:
+                    summary.write(". . . . . . . . . . . . . . . . . .  ")
+                else:
+                    statError = subdetDepthAverageStatErrors[det][iWeight]
+                    systError = subdetDepthAverageSystErrors[det][iWeight]
+                    weightStr = "%3.2f"%(weightDict[iWeight]); weightStr = weightStr.rjust(5)
+                    summary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
 
-                summary.write("\n")
-                aveSummary.write("\n")
-                      
-            summary.write("\n\n")
-            aveSummary.write("\n\n")
-                    
+                if averagePulseSubdetDepthAverageWeights[det][iWeight] == -999:
+                     aveSummary.write(". . . . . . . . . . . . . . . .  ")
+                else:
+                    statError = averagePulseSubdetDepthAverageStatErrors[det][iWeight]
+                    systError = averagePulseSubdetDepthAverageSystErrors[det][iWeight]
+                    weightStr = "%3.2f"%(averagePulseSubdetDepthAverageWeights[det][iWeight]); weightStr = weightStr.rjust(5)
+                    aveSummary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
+            summary.write("\n"); aveSummary.write("\n")
+
         summary.close()
 
 if __name__ == '__main__':
@@ -744,27 +740,27 @@ if __name__ == '__main__':
     parser.add_argument("--tag"       , dest="tag"       , help="Unique tag for output" , type=str     , default="TAG")
     parser.add_argument("--fromCache" , dest="fromCache" , help="Read from cache file"  , default=False, action="store_true")
     parser.add_argument("--algo"      , dest="algo"      , help="Which reco scheme"     , type=str     , default="ALGO")
-    parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"      , type=int     , nargs="+", default=[-1,0])
+    parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"      , type=int     , nargs="+", default=[-1,1])
     
     arg = parser.parse_args()
 
     gFromCache = arg.fromCache
     eventRange = xrange(arg.evtRange[0], arg.evtRange[0]+arg.evtRange[1]) 
 
-    aPath = ""; outPath = "./plots/Weights/%s/TP/%s"%(scheme,arg.tag)
+    aPath = ""; outPath = "./plots/Weights/%s/TP/%s"%(arg.algo,arg.tag)
                 
-    PUFile   = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/Depth/OOT.root"
-    noPUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/Depth/NOPU.root"
+    PUFile   = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/NoDepth/OOT.root"
+    noPUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/NoDepth/NOPU.root"
 
     theExtractor = WeightExtractor(arg.algo, PUFile, noPUFile, outPath)
     theExtractor.eventLoop(eventRange)
 
     if gFromCache:
         theExtractor.loadHistograms()
-        theExtractor.extractFitWeights()
+        theExtractor.extractFitWeights(save=True)
         theExtractor.extractAveragePulseWeights()
         theExtractor.getWeightSummary()
 
-        theExtractor.drawPulseShapes("PU")
-        theExtractor.drawPulseShapes("NOPU")
-        theExtractor.drawWeightCorrs()
+        #theExtractor.drawPulseShapes("PU")
+        #theExtractor.drawPulseShapes("NOPU")
+        #theExtractor.drawWeightCorrs()

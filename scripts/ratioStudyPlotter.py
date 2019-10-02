@@ -128,6 +128,9 @@ if __name__ == '__main__':
 
     # Unfortunately hard code this
     # But get the companion ntuples for PFA2 to use as a friend
+    for iSubdir in xrange(len(subdirs)):
+        if "PFA" in subdirs[iSubdir]: subdirs[iSubdir] = "PFA2" 
+
     PFA2File = '/'.join(subdirs[0:-1]) + "/hcalNtuple_PFA2.root"
 
     if not os.path.exists(PFA2File):
