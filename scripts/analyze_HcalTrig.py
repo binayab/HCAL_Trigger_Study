@@ -8,7 +8,7 @@ sys.path.insert(0, "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/scripts/")
 from algo_weights import pfaWeightsMap
 
 if len(sys.argv) < 5:
-    print("An example call to cmsRun: 'cmsRun analyze_HcalTrig.py 3 325170 Run3 /path/to/input.root'")
+    print("An example call to cmsRun: 'cmsRun analyze_HcalTrig.py PFA3p_PER_IETA MC Run3 50PU'")
     exit()
 
 PFA =  str(sys.argv[2])
@@ -125,8 +125,6 @@ else:
         secondaryFileNames = cms.untracked.vstring(),
     )
 
-#process.source.eventsToProcess = cms.untracked.VEventRange(cms.EventRange("1:2903-1:2903"),)
-
 process.options = cms.untracked.PSet(
 
 )
@@ -155,19 +153,16 @@ else:
 
 process.startjob = cms.Path(                                                   
   process.hcalDigis*                                                                        
-#  process.RawToDigi*                                                                        
   process.hfprereco*
   process.hfreco*
   process.hbheprereco
 
 )
 # Path and EndPath definitions
-#process.raw2digi_step = cms.Path(process.RawToDigi)
 process.endjob_step = cms.EndPath(process.endOfProcess)
 
 # Schedule definition
 process.schedule = cms.Schedule(process.startjob,process.endjob_step)      
-#process.schedule = cms.Schedule(process.raw2digi_step,process.endjob_step)
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
 

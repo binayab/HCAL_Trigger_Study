@@ -13,9 +13,11 @@ def fillIetaDictionary(tPFAX, tPFA2, outFile, ietaDictionaryLowET,ietaDictionary
     tPFAX.SetBranchStatus("*", 0)
     tPFAX.SetBranchStatus("ieta", 1)  
     tPFAX.SetBranchStatus("TP_energy", 1)
+    tPFAX.SetBranchStatus("event", 1)
 
     tPFA2.SetBranchStatus("*", 0)
     tPFA2.SetBranchStatus("TP_energy", 1)
+    tPFA2.SetBranchStatus("event", 1)
 
     for depth in xrange(1,8):
         tPFAX.SetBranchStatus("d%d"%(depth), 1)
@@ -26,6 +28,9 @@ def fillIetaDictionary(tPFAX, tPFA2, outFile, ietaDictionaryLowET,ietaDictionary
 
         tPFAX.GetEntry(iEntry)
         tPFA2.GetEntry(iEntry)
+
+        if tPFAX.event != tPFA2.event:
+            print "Wow, we're effed!"
 
         aieta = abs(tPFAX.ieta)
         corrTPET = tPFAX.TP_energy
@@ -64,7 +69,7 @@ def fillIetaDictionary(tPFAX, tPFA2, outFile, ietaDictionaryLowET,ietaDictionary
         lowHisto = ietaDictionaryLowET[ieta]
         highHisto = ietaDictionaryHighET[ieta]
 
-        lowHisto.SetTitle("");                            highHisto.SetTitle("")
+        lowHisto.SetTitle("|i#eta| = %d"%(ieta));         highHisto.SetTitle("|i#eta| = %d"%(ieta))
         lowHisto.GetXaxis().SetTitle("Depth");            highHisto.GetXaxis().SetTitle("Depth")
         lowHisto.GetYaxis().SetTitle("ADC (Linearized)"); highHisto.GetYaxis().SetTitle("ADC (Linearized)")
 

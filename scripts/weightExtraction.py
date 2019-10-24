@@ -401,47 +401,48 @@ class WeightExtractor:
         name = "pulse" + category; histo = 0
         for depth in self.depths:
             for ieta in self.HBHEieta:
+                for ts2Cut in self.ts2Cuts:
                 
-                if   category == "PU":   histo = self.pulseShapesPU[depth][ieta][self.ts2Cut]
-                elif category == "NOPU": histo = self.pulseShapesNOPU[depth][ieta][self.ts2Cut]
-                else: continue
+                    if   category == "PU":   histo = self.pulseShapesPU[depth][ieta][ts2Cut]
+                    elif category == "NOPU": histo = self.pulseShapesNOPU[depth][ieta][ts2Cut]
+                    else: continue
 
-                # No need to print out empty plot (for ieta, depth that does not exist...)
-                if histo.GetEntries() == 0: continue
+                    # No need to print out empty plot (for ieta, depth that does not exist...)
+                    if histo.GetEntries() == 0: continue
 
-                cname = "c_i%d_d%d_%s"%(ieta,depth,category)
-                canvas = ROOT.TCanvas(cname, cname, 2400, 2400); canvas.cd()
-                ROOT.gPad.SetRightMargin(0.13)
-                ROOT.gPad.SetLeftMargin(0.12)
+                    cname = "c_i%d_d%d_TS2gt%d_%s"%(ieta,depth,ts2Cut,category)
+                    canvas = ROOT.TCanvas(cname, cname, 2400, 2400); canvas.cd()
+                    ROOT.gPad.SetRightMargin(0.13)
+                    ROOT.gPad.SetLeftMargin(0.12)
 
-                averagePulse = histo.ProfileX("prof_i%d_d%d_%s"%(ieta,depth,category),1,-1) 
+                    averagePulse = histo.ProfileX("prof_i%d_d%d_TSgt%d_%s"%(ieta,depth,ts2Cut,category),1,-1) 
 
-                histo.SetContour(255)
-                theTitle = "|i#eta| = %d"%(ieta)
-                if depth != 0: theTitle += ", Depth = %d"%(depth)
-                histo.SetTitle(theTitle)
-                histo.GetYaxis().SetTitle("ADC (Linearized)")
-                histo.GetXaxis().SetTitle("TS")
-                histo.GetYaxis().SetRangeUser(0,35)
+                    histo.SetContour(255)
+                    theTitle = "|i#eta| = %d"%(ieta)
+                    if depth != 0: theTitle += ", Depth = %d"%(depth)
+                    histo.SetTitle(theTitle)
+                    histo.GetYaxis().SetTitle("Linearized ADC")
+                    histo.GetXaxis().SetTitle("TS")
+                    histo.GetYaxis().SetRangeUser(0,35)
 
-                histo.GetYaxis().SetLabelSize(0.045); histo.GetYaxis().SetTitleSize(0.051); histo.GetYaxis().SetTitleOffset(1.05)
-                histo.GetXaxis().SetLabelSize(0.045); histo.GetXaxis().SetTitleSize(0.051); histo.GetXaxis().SetTitleOffset(0.95)
-                histo.GetZaxis().SetLabelSize(0.045); 
+                    histo.GetYaxis().SetLabelSize(0.045); histo.GetYaxis().SetTitleSize(0.051); histo.GetYaxis().SetTitleOffset(1.05)
+                    histo.GetXaxis().SetLabelSize(0.045); histo.GetXaxis().SetTitleSize(0.051); histo.GetXaxis().SetTitleOffset(0.95)
+                    histo.GetZaxis().SetLabelSize(0.045); 
 
-                histo.Draw("COLZ")
+                    histo.Draw("COLZ")
 
-                averagePulse.SetLineWidth(5)
-                averagePulse.SetMarkerSize(3)
-                averagePulse.SetMarkerStyle(20)
-                averagePulse.SetMarkerColor(ROOT.kBlack)
-                averagePulse.SetLineColor(ROOT.kBlack)
-                averagePulse.Draw("SAME")
+                    averagePulse.SetLineWidth(5)
+                    averagePulse.SetMarkerSize(3)
+                    averagePulse.SetMarkerStyle(20)
+                    averagePulse.SetMarkerColor(ROOT.kBlack)
+                    averagePulse.SetLineColor(ROOT.kBlack)
+                    averagePulse.Draw("SAME")
     
-                canvas.SetLogz()
+                    canvas.SetLogz()
 
-                outPath = "%s/PulseShapes/ieta%d/depth%d/%s"%(self.outPath,ieta,depth,category)
-                if not os.path.exists(outPath): os.makedirs(outPath)
-                canvas.SaveAs(outPath + "/AveragePulse.pdf")
+                    outPath = "%s/PulseShapes/ieta%d/depth%d/TS2gt%d/%s"%(self.outPath,ieta,depth,ts2Cut,category)
+                    if not os.path.exists(outPath): os.makedirs(outPath)
+                    canvas.SaveAs(outPath + "/AveragePulse.pdf")
 
     # Method for drawing histogram of correlation between wSOI-1 and wSOI-2
     def drawWeightCorrs(self):
@@ -490,13 +491,13 @@ class WeightExtractor:
         ROOT.gPad.SetLeftMargin(0.15)
 
         weightHisto.GetXaxis().SetRangeUser(-9,3)
-        theTitle = "|ieta| = %d"%(ieta)
+        theTitle = "|i#eta| = %d"%(ieta)
         if depth != 0: theTitle += ", Depth = %d"%(depth)
         weightHisto.SetTitle(theTitle)
         weightHisto.GetXaxis().SetTitle("w_{SOI-%d}"%(3-iWeight))
         weightHisto.GetYaxis().SetTitle("A.U.")
-        weightHisto.GetYaxis().SetLabelSize(0.6*0.048); weightHisto.GetYaxis().SetTitleSize(0.054); weightHisto.GetYaxis().SetTitleOffset(1.45)
-        weightHisto.GetXaxis().SetLabelSize(0.6*0.048); weightHisto.GetXaxis().SetTitleSize(0.054); weightHisto.GetXaxis().SetTitleOffset(0.9)
+        weightHisto.GetYaxis().SetLabelSize(0.048); weightHisto.GetYaxis().SetTitleSize(0.054); weightHisto.GetYaxis().SetTitleOffset(1.45)
+        weightHisto.GetXaxis().SetLabelSize(0.048); weightHisto.GetXaxis().SetTitleSize(0.054); weightHisto.GetXaxis().SetTitleOffset(0.9)
 
         weightHisto.SetLineWidth(3)
         weightHisto.SetLineColor(ROOT.kBlack)
@@ -544,28 +545,50 @@ class WeightExtractor:
                         rebinFits       = {1 : 0, 2 : 0, 3 : 0, 4 : 0}
                         rebinWeights    = numpy.zeros((5,1))
                         rebinStatErrors = numpy.zeros((5,1)) 
-                        for rebin in rebinHistos.keys(): rebinHistos[rebin] = histo.Rebin(rebin+1, "r%d_i%d_d%d_w%d_TS2gt%d"%(rebin,ieta,depth,iWeight,ts2Cut))
+                        for rebin in rebinHistos.keys(): rebinHistos[rebin] = histo.Rebin(rebin, "r%d_i%d_d%d_w%d_TS2gt%d"%(rebin,ieta,depth,iWeight,ts2Cut))
 
                         for rebin, rHisto in rebinHistos.iteritems():
+
                             binmax = rHisto.GetMaximumBin(); xmax = rHisto.GetBinCenter(binmax); binWidth = rHisto.GetBinWidth(1)
-                            name = "f_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString = "gaus(0)"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
 
-                            theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
-                            theFunc.SetParameters(0.2, 0, 2.5)
-                            theFunc.SetParNames("A", "mu", "sigma")
-                            theFunc.SetParLimits(0, 0.0, 1.0)
-                            theFunc.SetParLimits(1, -2.5,2.5)
-                            theFunc.SetParLimits(2, 0.0, 5.0)
+                            if ieta <= 20 or self.tpSamples == 1:
 
-                            rHisto.Fit(name, "QMRWL")
+                                name = "f_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString = "[0]*TMath::Landau(-x, [1], [2])*TMath::CauchyDist(-x, [3], [4])"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
+                                #theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
+                                theFunc = ROOT.TF1(name, funcString, -5, 1.0)
 
-                            rebinWeights[rebin-1] = theFunc.GetParameter("mu")
+                                theFunc.SetParameters(0.2, 0, 2.5, 0, 2.5)
+                                theFunc.SetParNames("A", "position", "scale", "mu", "sigma")
+                                theFunc.SetParLimits(0, 0.0, 25.0)
+                                theFunc.SetParLimits(1, 0.0, 25.0)
+                                theFunc.SetParLimits(2, 0.0, 25.0)
+                                theFunc.SetParLimits(3, 0.0, 25.0)
+                                theFunc.SetParLimits(4, 0.0, 25.0)
+
+                            elif ieta > 20:
+
+                                name = "f_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString = "[0]*TMath::Gaus(-x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
+                                #theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
+                                theFunc = ROOT.TF1(name, funcString, -5, 1.0)
+
+                                theFunc.SetParameters(0.2, 0, 2.5, 2.5, 2.5)
+                                theFunc.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
+                                theFunc.SetParLimits(0, 0.0, 25.0)
+                                theFunc.SetParLimits(1, 0.0, 25.0)
+                                theFunc.SetParLimits(2, 0.0, 5.0)
+                                theFunc.SetParLimits(3, 0.0, 25.0)
+                                theFunc.SetParLimits(3, 0.0, 25.0)
+
+                            rHisto.Fit(name, "QMRWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                            theFunc.SetNpx(1000)
+
+                            rebinWeights[rebin] = theFunc.GetMaximumX(-5.0,5.0)
                             meanError = theFunc.GetParameter("sigma")
 
-                            rebinFits[rebin-1] = theFunc
-                            rebinStatErrors[rebin-1] = meanError / math.sqrt(numEntries) 
-
-                        theWeight = rebinWeights[self.rebin-1]; theStatError = rebinStatErrors[self.rebin-1]
+                            rebinFits[rebin] = theFunc
+                            rebinStatErrors[rebin] = meanError / math.sqrt(numEntries) 
+                            
+                        theWeight = rebinWeights[self.rebin]; theStatError = rebinStatErrors[self.rebin]
 
                         # From the five different fits the histogram determine the standard dev of the weights 
                         theSystError = numpy.std(rebinWeights)
@@ -761,6 +784,6 @@ if __name__ == '__main__':
         theExtractor.extractAveragePulseWeights()
         theExtractor.getWeightSummary()
 
-        #theExtractor.drawPulseShapes("PU")
-        #theExtractor.drawPulseShapes("NOPU")
-        #theExtractor.drawWeightCorrs()
+        theExtractor.drawPulseShapes("PU")
+        theExtractor.drawPulseShapes("NOPU")
+        theExtractor.drawWeightCorrs()
