@@ -1,92 +1,134 @@
 #!/usr/bin/env python
 
-import os,sys
-import argparse
-import commands
-import subprocess
-import shutil
+import os, sys, argparse, subprocess, shutil
 from time import strftime
 
-date_and_time=strftime("%Y%m%d_%H%M%S")
+# With either a local EOS directory or dataset from DAS, get the list of files
+def files4Dataset(dataset):
 
-usage = "usage: %prog [options]"
-parser = argparse.ArgumentParser(usage)
-parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster"   , default=False, action="store_true")
-parser.add_argument("--run"     , dest="run"     , help="Which run, you better know" , type=str, default="MC")
-parser.add_argument("--pfa"     , dest="pfa"     , help="Which PFA to use"           , type=int, required=True)
-parser.add_argument("--era"     , dest="era"     , help="Run2 or Run3"               , type=str, default="Run3")
-parser.add_argument("--filelist", dest="filelist", help="Unique name for filelist"    , type=str, default="TTbar_50PU_Run3")
-parser.add_argument("--tag"     , dest="tag"     , help="Unique tag"    , type=str, required=True)
+    onEOS = os.getenv("USER") in dataset
 
-arg = parser.parse_args()
+    # If my name is in the path then we are on EOS
+    if onEOS: proc = subprocess.Popen(['xrdfs', 'root://cmseos.fnal.gov', 'ls', dataset], stdout=subprocess.PIPE) 
 
-inputFiles = []
+    # Construct dasgoclient call and make it, reading back the standard out to get the list of files
+    else:     proc = subprocess.Popen(['dasgoclient', '--query=file dataset=%s'%(dataset)], stdout=subprocess.PIPE)
 
-inputFiles = ["root://cmsxrootd.fnal.gov/" + line.rstrip("\n") for line in open("./input/filelist/%s.txt"%(arg.filelist))]
-if not os.path.isfile("./input/filelist/%s.txt"%(arg.tag)):
-    print "Could not find input file list!"
-    quit()
+    files = proc.stdout.readlines();  files = [file.rstrip() for file in files]
 
-taskDir = date_and_time
-outputDir = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s"%(str(arg.tag))
-workingDir = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir)
+    # Prep the files for insertion into cmsRun config by adding the global redirector
+    returnFiles = []
+    for file in files:
+        if onEOS: returnFiles.append(file.replace("/store/", "root://cmsxrootd.fnal.gov///store/"))
+        else:     returnFiles.append(file.replace("/store/", "root://cms-xrd-global.cern.ch///store/"))
 
-subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
-os.makedirs(workingDir)
-
-shutil.copy2("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/scripts/analyze_HcalTrig.py", "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir))
-
-if outputDir.split("/")[-1] == "": outputDir = outputDir[:-1]
-if workingDir.split("/")[-1] == "": workingDir = workingDir[:-1]
+    return returnFiles 
 
 # Write .sh script to be run by Condor
-scriptFile = open("%s/runJob.sh"%(workingDir), "w")
-scriptFile.write("#!/bin/bash\n\n")
-scriptFile.write("INPUTFILE=$1\n")
-scriptFile.write("STUB=$2\n")
+def generate_job_steerer(workingDir, algo, outputDir):
 
-# Create directories to save log, submit, and mac files if they don't already exist
-logDir="%s/logs"%(workingDir)
-os.mkdir(logDir) # make the log directory
-
-scriptFile.write("SCRAM_ARCH=slc7_amd64_gcc700\n")
-scriptFile.write("source /cvmfs/cms.cern.ch/cmsset_default.sh\n") 
-scriptFile.write("eval `scramv1 project CMSSW CMSSW_10_6_0_pre4`\n")
-scriptFile.write("cd CMSSW_10_6_0_pre4\n")
-scriptFile.write("tar -xf ./../CMSSW_10_6_0_pre4.tar.xz\n")
-scriptFile.write("rm ./../CMSSW_10_6_0_pre4.tar.xz\n")
-scriptFile.write("cd src\n")
-scriptFile.write("eval `scramv1 runtime -sh`\n")
-scriptFile.write("eval `scramv1 b -j 10`\n")
-scriptFile.write("cd ./../..\n")
-scriptFile.write("cmsRun analyze_HcalTrig.py %s %s %s ${INPUTFILE} ${STUB}\n"%(arg.pfa,arg.run,arg.era))
-scriptFile.write("xrdcp -f hcalNtuple_${STUB}.root %s/hcalNtuple_${STUB}.root 2>&1\n"%(outputDir))
-scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
-scriptFile.write("rm -r analyze_HcalTrig.py CMSSW_10_6_0_pre4 hcalNtuple_${STUB}.root\n")
-scriptFile.close()
+    scriptFile = open("%s/runJob.sh"%(workingDir), "w")
+    scriptFile.write("#!/bin/bash\n\n")
+    scriptFile.write("INPUTFILE=$1\n")
+    scriptFile.write("JOB=$2\n\n")
+    scriptFile.write("export SCRAM_ARCH=slc7_amd64_gcc700\n\n")
+    scriptFile.write("source /cvmfs/cms.cern.ch/cmsset_default.sh\n") 
+    scriptFile.write("eval `scramv1 project CMSSW CMSSW_10_6_0_pre4`\n\n")
+    scriptFile.write("tar -xf CMSSW_10_6_0_pre4.tar.gz\n")
+    scriptFile.write("rm CMSSW_10_6_0_pre4.tar.gz\n")
+    scriptFile.write("mv algo_weights.py analyze_HcalTrig.py CMSSW_10_6_0_pre4/src\n\n")
+    scriptFile.write("cd CMSSW_10_6_0_pre4/src\n")
+    scriptFile.write("scramv1 b ProjectRename\n")
+    scriptFile.write("eval `scramv1 runtime -sh`\n\n")
+    scriptFile.write("cmsRun analyze_HcalTrig.py %s ${INPUTFILE} ${JOB}\n\n"%(algo))
+    scriptFile.write("xrdcp -f hcalNtuple_${JOB}.root %s 2>&1\n"%(outputDir))
+    scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
+    scriptFile.write("rm -r CMSSW_10_6_0_pre4\n")
+    scriptFile.close()
 
 # Write Condor submit file 
-condorSubmit = open("%s/condorSubmit.jdl"%(workingDir), "w")
-condorSubmit.write("Executable          =  %s\n"%(scriptFile.name))
-condorSubmit.write("Universe            =  vanilla\n")
-condorSubmit.write("Requirements        =  OpSys == \"LINUX\" && Arch ==\"x86_64\"\n")
-condorSubmit.write("Request_Memory      =  5 Gb\n")
-condorSubmit.write("Output = ./logs/$(Cluster)_$(Process).stdout\n")
-condorSubmit.write("Error = ./logs/$(Cluster)_$(Process).stderr\n")
-condorSubmit.write("Log = ./logs/$(Cluster)_$(Process).log\n")
-condorSubmit.write("Transfer_Input_Files = /uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s/analyze_HcalTrig.py, /uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/input/CMSSW_10_6_0_pre4.tar.xz\n"%(taskDir))
-condorSubmit.write("x509userproxy = $ENV(X509_USER_PROXY)\n")
+def generate_condor_submit(workingDir, inputFiles):
 
-for inputFile in inputFiles:
+    condorSubmit = open("%s/condorSubmit.jdl"%(workingDir), "w")
+    condorSubmit.write("Executable           =  %s/runJob.sh\n"%(workingDir))
+    condorSubmit.write("Universe             =  vanilla\n")
+    condorSubmit.write("Requirements         =  OpSys == \"LINUX\" && Arch ==\"x86_64\"\n")
+    condorSubmit.write("Request_Memory       =  5 Gb\n")
+    condorSubmit.write("Output               =  %s/logs/$(Cluster)_$(Process).stdout\n"%(workingDir))
+    condorSubmit.write("Error                =  %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
+    condorSubmit.write("Log                  =  %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
+    condorSubmit.write("x509userproxy        =  $ENV(X509_USER_PROXY)\n")
+    condorSubmit.write("Transfer_Input_Files =  %s/analyze_HcalTrig.py, %s/algo_weights.py, %s/CMSSW_10_6_0_pre4.tar.gz\n\n"%(workingDir, workingDir, workingDir))
+
+    iJob = 0
+    for inputFile in inputFiles:
+        
+        condorSubmit.write("Arguments       = %s %d\n"%(inputFile, iJob))
+        condorSubmit.write("Queue\n\n")
+
+        iJob += 1
     
-    stub = inputFile.split("/")[-1].split(".root")[0]
-    condorSubmit.write("Arguments       = %s %s\n"%(inputFile, stub))
-    condorSubmit.write("Queue\n\n")
+    condorSubmit.close()
 
-condorSubmit.close()
+if __name__ == '__main__':
 
-os.system("chmod +x %s"%(scriptFile.name))
+    parser = argparse.ArgumentParser(usage)
+    parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", type=bool, default=False, action="store_true")
+    parser.add_argument("--pfa"     , dest="pfa"     , help="Which PFA to use"        , type=str , required=True)
+    parser.add_argument("--dataset" , dest="dataset" , help="Unique path to dataset"  , type=str , default="50PU")
+    args = parser.parse_args()
 
-if arg.noSubmit: quit()
+    algo     = args.pfa
+    dataset  = args.dataset
+    noSubmit = args.noSubmit
+   
+    taskDir = strftime("%Y%m%d_%H%M%S")
+    hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(os.getenv("HOME"))
+    
+    physProcess = "";  inputFiles = []
+    if dataset == "50PU" or dataset == "NOPU" or dataset == "OOT" or dataset == "DATA":
+        physProcess = dataset
+        inputFiles.append(dataset)
+    else:
+        inputFiles = files4Dataset(dataset)
+        physProcess = dataset.split("/")[1].split("_")[0]
+    
+    outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s/%s"%(physProcess, algo)
+    workingDir = "%s/condor/%s_%s_%s"%(hcalDir, physProcess, algo, taskDir)
+    
+    # After defining the directory to work the job in and output to, make them
+    subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
+    os.makedirs(workingDir)
+    
+    # Send the cmsRun config to the working dir as well as the algo weights
+    shutil.copy2("%s/scripts/analyze_HcalTrig.py"%(hcalDir), workingDir)
+    shutil.copy2("%s/scripts/algo_weights.py"%(hcalDir), workingDir)
+    
+    if outputDir.split("/")[-1] == "":  outputDir  = outputDir[:-1]
+    if workingDir.split("/")[-1] == "": workingDir = workingDir[:-1]
 
-os.system("condor_submit " + condorSubmit.name)
+    # Create directories to save logs
+    os.makedirs("%s/logs"%(workingDir))
+
+    # Make the .sh to run the show
+    generate_job_steerer(workingDir, algo, outputDir)
+
+    # Make the jdl to hold condor's hand
+    generate_condor_submit(workingDir, inputFiles)
+
+    subprocess.call(["chmod", "+x", "%s/runJob.sh"%(workingDir)])
+
+    # Right here we need to edit a src file in CMSSW and recompile to change the input LUT based on 1TS or 2TS scheme...
+    # After that is done, tar up CMSSW and send to the working directory
+    CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
+    filePath = '%s/src/CalibCalorimetry/HcalTPGAlgos/src/HcaluLUTTPGCoder.cc'%(CMSSW_BASE)
+    if "1" not in algo: replaceStr = 's|containmentCorrection1TS;|pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);|g'
+    else:               replaceStr = 's|pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);|containmentCorrection1TS;|g'
+
+    subprocess.call(['sed', '-i', replaceStr, filePath])
+    subprocess.call(['scram', 'b', '-j', '8'], cwd=CMSSW_BASE+"/src")
+    subprocess.call(["tar", "--exclude-caches-all", "--exclude-vcs", "-zcf", "%s/%s.tar.gz"%(workingDir,CMSSW_VERSION), "-C", "%s/.."%(CMSSW_BASE), CMSSW_VERSION, "--exclude=tmp"])
+    
+    if args.noSubmit: quit()
+    
+    os.system("condor_submit %s/condorSubmit.jdl"%(workingDir))
