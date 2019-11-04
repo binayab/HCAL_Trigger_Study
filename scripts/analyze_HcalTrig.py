@@ -1,29 +1,27 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-import sys
-
-sys.path.insert(0, "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/scripts/")
+import sys, os
 
 from algo_weights import pfaWeightsMap
+from Configuration.AlCa.GlobalTag import GlobalTag
 
-if len(sys.argv) < 5:
-    print("An example call to cmsRun: 'cmsRun analyze_HcalTrig.py PFA3p_PER_IETA MC Run3 50PU'")
+if len(sys.argv) < 4:
+    print("An example call to cmsRun: 'cmsRun analyze_HcalTrig.py PFA3p_PER_IETA 50PU 0'")
     exit()
 
-PFA =  str(sys.argv[2])
-run = str(sys.argv[3])
-era = str(sys.argv[4])
-inputFile = str(sys.argv[5])
+PFA       = str(sys.argv[2])
+inputFile = str(sys.argv[3])
+job       = str(sys.argv[4])
 
-stub = ""
-if inputFile != "NULL": stub = "_" + inputFile.split("/")[-1].split(".root")[0]
+isMC = inputFile == "OOT" or inputFile == "NOPU" or inputFile == "50PU" or "mcRun" in inputFile
 
+# Intialize the process based on the era
 process = 0
-if era == "Run2": process = cms.Process('RAW2DIGI',eras.Run2_2018)
-elif era == "Run3": process = cms.Process('RAW2DIGI',eras.Run3)
+if isMC: process = cms.Process('RAW2DIGI', eras.Run3)
+else:    process = cms.Process('RAW2DIGI', eras.Run2_2018)
 
-# import of standard configurations
+# Import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('SimGeneral.HepPDTESSource.pythiapdt_cfi')
 process.load('FWCore.MessageService.MessageLogger_cfi')
@@ -36,15 +34,19 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load("SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff")
 process.load("RecoLocalCalo.Configuration.hcalLocalReco_cff")
 
+# Set the global tag if we are running on MC or data 
+if isMC: process.GlobalTag = GlobalTag(process.GlobalTag, '106X_mcRun3_2021_realistic_v3', '')
+else:    process.GlobalTag = GlobalTag(process.GlobalTag, '103X_dataRun2_Prompt_v3', '')
+
 print "Using PeakFinderAlgorithm %s"%(PFA)
 if "1" not in PFA:
     print "Only using 2 samples"
     process.simHcalTriggerPrimitiveDigis.numberOfSamples = 2
-    process.simHcalTriggerPrimitiveDigis.numberOfPresamples = 0
 else:
     print "Only using 1 sample"
     process.simHcalTriggerPrimitiveDigis.numberOfSamples = 1
-    process.simHcalTriggerPrimitiveDigis.numberOfPresamples = 0
+
+process.simHcalTriggerPrimitiveDigis.numberOfPresamples = 0
 
 if PFA in pfaWeightsMap:
     print "Using weights: "
@@ -57,7 +59,7 @@ process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(-1)
 )
 
-# Input source
+# Input source, here a few different pre-defined sets of files
 if inputFile == "OOT":
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
@@ -72,10 +74,10 @@ elif inputFile == "NOPU":
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
             'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-0PU123.root',
+            #'root://cmsxrootd.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/TTbar_RelVal/TTbar-DIGI-RAW-0PU_Run2_2018.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
-
 elif inputFile == "50PU": 
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
@@ -108,26 +110,25 @@ elif inputFile == "50PU":
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
-
 elif inputFile == "DATA":
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/DC207766-1C12-DC44-B679-89EB77C5EE2A.root', #LS 44
-            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/0B051695-EFBF-3F47-874D-92DE9278FA75.root', #LS 45
-            'root://cmsxrootd.fnal.gov///store/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/9318ED7A-17EB-6644-9DE8-1FF212666945.root', #LS 49
+            # High PU
+            #'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run2018D/JetHT/RAW/v1/000/324/021/00000/LS0044.root',
+            #'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run2018D/JetHT/RAW/v1/000/324/021/00000/LS0045.root',
+            #'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run2018D/JetHT/RAW/v1/000/324/021/00000/LS0049.root',
+
+            # Low PU
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run2018D/JetHT/RAW/v1/000/324/021/00000/LS0800.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/Run2018D/JetHT/RAW/v1/000/324/021/00000/LS0802.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
-
 else:
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring('%s'%(inputFile),),
         secondaryFileNames = cms.untracked.vstring(),
     )
-
-process.options = cms.untracked.PSet(
-
-)
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
@@ -136,21 +137,7 @@ process.configurationMetadata = cms.untracked.PSet(
     version = cms.untracked.string('$Revision: 1.19 $')
 )
 
-# Output definition
-
-# Additional output definition
-
-# Other statements
-from Configuration.AlCa.GlobalTag import GlobalTag
-if "MC" in run:
-    if era == "Run2":
-        process.GlobalTag = GlobalTag(process.GlobalTag, '102X_upgrade2018_realistic_v12', '')
-    elif era == "Run3":
-        process.GlobalTag = GlobalTag(process.GlobalTag, '106X_mcRun3_2021_realistic_v3', '')
-
-else:
-    process.GlobalTag = GlobalTag(process.GlobalTag, '101X_dataRun2_Prompt_v11', '')
-
+# Make an analysis path
 process.startjob = cms.Path(                                                   
   process.hcalDigis*                                                                        
   process.hfprereco*
@@ -158,6 +145,7 @@ process.startjob = cms.Path(
   process.hbheprereco
 
 )
+
 # Path and EndPath definitions
 process.endjob_step = cms.EndPath(process.endOfProcess)
 
@@ -165,8 +153,6 @@ process.endjob_step = cms.EndPath(process.endOfProcess)
 process.schedule = cms.Schedule(process.startjob,process.endjob_step)      
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
-
-# customisation of the process.
 
 # Automatic addition of the customisation function from Debug.HcalDebug.customize
 from Debug.HcalDebug.customize import use_data_reemul_tp,compare_raw_reemul_tp,compare_reemul_reco_sev9 
@@ -179,10 +165,8 @@ process = compare_raw_reemul_tp(process)
 #call to customisation function compare_reemul_reco_sev9 imported from Debug.HcalDebug.customize
 process = compare_reemul_reco_sev9(process)
 
-# End of customisation functions
+process.TFileService.fileName=cms.string('hcalNtuple_%s.root'%(job))
 
-process.TFileService.fileName=cms.string('hcalNtuple%s_%s.root'%(stub,PFA))
 # Add early deletion of temporary data products to reduce peak memory need
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
 process = customiseEarlyDelete(process)
-# End adding early deletion
