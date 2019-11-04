@@ -72,8 +72,8 @@ def generate_condor_submit(workingDir, inputFiles):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(usage)
-    parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", type=bool, default=False, action="store_true")
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
     parser.add_argument("--pfa"     , dest="pfa"     , help="Which PFA to use"        , type=str , required=True)
     parser.add_argument("--dataset" , dest="dataset" , help="Unique path to dataset"  , type=str , default="50PU")
     args = parser.parse_args()
