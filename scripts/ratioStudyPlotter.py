@@ -1,4 +1,4 @@
-import sys, os, ROOT
+import sys, os, ROOT, subprocess
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
@@ -6,6 +6,8 @@ ROOT.gStyle.SetLineWidth(4)
 ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.TH1.SetDefaultSumw2()
 
+# From the events do a draw to make a 3D histo with RH or TP ET on z, TP/RH ratio on y and ieta on x
+# Regardless if RH or TP ET on z, always impose TP ET > 0.5
 def ratioTPVsRH_Eta_ET(evtsTree, basis = "TP", bx = "(1==1)"):
 
     etBins = 0; etBranch = ""; tpMinSelection = "TP_energy>0.5"
@@ -24,6 +26,7 @@ def ratioTPVsRH_Eta_ET(evtsTree, basis = "TP", bx = "(1==1)"):
 
     return h3
 
+# Make a TP/RH vs ieta 2D plot
 def ratioTPVsRH_Eta(outfile, histo, basis, etRange = []):
 
     outfile.cd()
@@ -31,9 +34,10 @@ def ratioTPVsRH_Eta(outfile, histo, basis, etRange = []):
     htemp = histo.Clone()
 
     h2 = 0
-    if len(etRange) == 0: htemp.GetZaxis().SetRange(1, htemp.GetZaxis().GetNbins())
+    if   len(etRange) == 0: htemp.GetZaxis().SetRange(1, htemp.GetZaxis().GetNbins())
     elif len(etRange) == 1: htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(etRange[0]),htemp.GetZaxis().FindBin(etRange[0]))
     elif len(etRange) == 2: htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(etRange[0])+1,htemp.GetZaxis().FindBin(etRange[1]))
+
     htemp.GetZaxis().SetBit(ROOT.TAxis.kAxisRange)
     h2 = htemp.Project3D("yx")
 
@@ -41,13 +45,11 @@ def ratioTPVsRH_Eta(outfile, histo, basis, etRange = []):
     h2.GetXaxis().SetTitle("i#eta")
     h2.GetYaxis().SetTitle("E_{T,TP} / E_{T,RH}")
 
-    if len(etRange) == 0:
-        h2.Write("TPRH_vs_Eta")
-    elif len(etRange) == 1:
-        h2.Write("TPRH_vs_Eta_%sET%0.1f"%(basis,etRange[0]))
-    elif len(etRange) == 2:
-        h2.Write("TPRH_vs_Eta_%sET%0.1fto%0.1f"%(basis,etRange[0],etRange[1]))
+    if   len(etRange) == 0: h2.Write("TPRH_vs_Eta")
+    elif len(etRange) == 1: h2.Write("TPRH_vs_Eta_%sET%0.1f"%(basis,etRange[0]))
+    elif len(etRange) == 2: h2.Write("TPRH_vs_Eta_%sET%0.1fto%0.1f"%(basis,etRange[0],etRange[1]))
 
+# 1D histo of TP/RH values for range of TP ET and ieta
 def ratioTPVsRH(outfile, histo, basis, etRange = [], ietaRange = []):
 
     outfile.cd()
@@ -63,12 +65,13 @@ def ratioTPVsRH(outfile, histo, basis, etRange = [], ietaRange = []):
     elif len(etRange) == 2:
         htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(etRange[0])+1,htemp.GetZaxis().FindBin(etRange[1]))
         etStr = "%sET%0.1fto%0.1f"%(basis,etRange[0],etRange[1])
+
     htemp.GetZaxis().SetBit(ROOT.TAxis.kAxisRange)
     h2 = htemp.Project3D("yx")
 
     h = 0; ietaStr = ""
     if len(ietaRange) == 0:
-        h = h2.ProjectionY("%s_proj"%(h2.GetTitle()), 1, h2.GetxAxis().GetNbins())
+        h = h2.ProjectionY("%s_proj"%(h2.GetTitle()), 1, h2.GetXaxis().GetNbins())
     elif len(ietaRange) == 1:
         hpos = h2.ProjectionY("%s_proj_pos_%d"%(h2.GetTitle(),ietaRange[0]), h2.GetXaxis().FindBin(ietaRange[0]),h2.GetXaxis().FindBin(ietaRange[0]))
         hneg = h2.ProjectionY("%s_proj_neg_%d"%(h2.GetTitle(),ietaRange[0]), h2.GetXaxis().FindBin(-ietaRange[0]),h2.GetXaxis().FindBin(-ietaRange[0]))
@@ -86,55 +89,69 @@ def ratioTPVsRH(outfile, histo, basis, etRange = [], ietaRange = []):
 
     h.Write("TPRH_%s_%s"%(etStr,ietaStr))
 
-def ratioTPVsRH_ET(outfile, histo, basis, ietaRange = []):
+# 2D plot of TP/RH as a function of RH or TP ET with a selection on ieta
+def ratioTPVsRH_ET(outfile, histo, basis, ietaRange = [1,28]):
 
     outfile.cd()
 
-    htemp = histo.Clone()
+    htempp = histo.Clone(histo.GetName()+"_pos")
+    htempn = histo.Clone(histo.GetName()+"_neg")
 
-    h2 = 0; ietaStr = ""
-    if len(ietaRange) == 0:
-        htemp.GetXaxis().SetRange(1, htemp.GetXaxis().GetNbins())
-        htemp.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
-    elif len(etRange) == 1:
-        htemp.GetXaxis().SetRange(htemp.GetXaxis().FindBin(ietaRange[0]),htemp.GetXaxis().FindBin(ietaRange[0]))
-        htemp.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
-        ietaStr = "_%sieta%0.1f"%(basis,ietaRange[0])
-    elif len(etRange) == 2:
-        htemp.GetXaxis().SetRange(htemp.GetXaxis().FindBin(ietaRange[0]),htemp.GetXaxis().FindBin(ietaRange[1]))
-        htemp.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
-        ietaStr = "_%sieta%0.1fto%0.1f"%(basis,ietaRange[0],ietaRange[1])
+    h2pos = 0; h2neg = 0; ietaStr = ""
+    if len(ietaRange) == 1:
+        htempp.GetXaxis().SetRange(htempp.GetXaxis().FindBin(ietaRange[0]),htempp.GetXaxis().FindBin(ietaRange[0]))
+        htempn.GetXaxis().SetRange(htempn.GetXaxis().FindBin(-ietaRange[0]),-htempn.GetXaxis().FindBin(-ietaRange[0]))
 
-    h2 = htemp.Project3D("yz")
+        ietaStr = "_ieta%d"%(ietaRange[0])
+    elif len(ietaRange) == 2:
+        htempp.GetXaxis().SetRange(htempp.GetXaxis().FindBin(ietaRange[0]),htempp.GetXaxis().FindBin(ietaRange[1]))
+        htempn.GetXaxis().SetRange(htempn.GetXaxis().FindBin(-ietaRange[1]),htempn.GetXaxis().FindBin(-ietaRange[0]))
 
-    h2.SetTitle("")
-    h2.GetYaxis().SetTitle("E_{T,TP} / E_{T,RH}")
-    h2.GetXaxis().SetTitle("E_{T,%s} [GeV]"%(basis))
+        ietaStr = "_ieta%dto%d"%(ietaRange[0],ietaRange[1])
 
-    h2.Write("TPRH_%sET%s"%(basis,ietaStr))
+    htempp.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
+    htempn.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
 
-def analysis(PFAXFile, PFA2File):
+    h2pos = htempp.Project3D("yz")
+    h2neg = htempn.Project3D("yz")
 
-    outPath = PFAXFile.replace(".root", "_ratios.root") 
-    outFile = ROOT.TFile.Open(outPath, "RECREATE")
+    h2pos.Add(h2neg)
 
-    fPFAX = ROOT.TFile.Open(PFAXFile, "READ")
-    fPFA2 = ROOT.TFile.Open(PFA2File, "READ")
+    h2pos.SetTitle("")
+    h2pos.GetYaxis().SetTitle("E_{T,TP} / E_{T,RH}")
+    h2pos.GetXaxis().SetTitle("E_{T,%s} [GeV]"%(basis))
 
-    tPFAX = fPFAX.Get("compareReemulRecoSeverity9/matches")
-    tPFA2 = fPFA2.Get("compareReemulRecoSeverity9/matches")
+    h2pos.Write("TPRH_%sET%s"%(basis,ietaStr))
 
-    friendAdded = tPFAX.AddFriend(tPFA2, "tPFA2")
-    if friendAdded == 0:
-        print "Trouble adding friend tree from PFA2 file!"
-        print "Exiting..."
-        quit()
+def analysis(PFAXFileDir, outDir):
 
-    TPETvRatiovEta_TP = ratioTPVsRH_Eta_ET(tPFAX,"TP"); TPETvRatiovEta_TP.SetDirectory(0)
-    TPETvRatiovEta_RH = ratioTPVsRH_Eta_ET(tPFAX,"RH"); TPETvRatiovEta_RH.SetDirectory(0)
+    onEOS = "store" in PFAXFileDir
 
-    fPFAX.Close()
-    fPFA2.Close()
+    if not os.path.exists(outDir): os.makedirs(outDir)
+
+    outFile = ROOT.TFile.Open(outDir + "/ratios.root", "RECREATE")
+
+    cPFAX = ROOT.TChain("compareReemulRecoSeverity9/matches")
+
+    # Whether on EOS or locally, get the list of files to run on 
+    proc = 0;  allItems = []
+    if onEOS: 
+        proc = subprocess.Popen(["xrdfs", "root://cmseos.fnal.gov", "ls", PFAXFileDir], stdout=subprocess.PIPE)
+        allItems = proc.stdout.readlines();  allItems = [item.rstrip() for item in allItems]
+    else:
+        allItems = os.listdir(PFAXFileDir)
+
+    # Add only honest root files to TChain
+    for item in allItems:
+        
+        if ".root" not in item: continue
+        if "ratio" in item:     continue
+    
+        if onEOS: cPFAX.AddFile("root://cmseos.fnal.gov/"+item)
+        else:     cPFAX.AddFile(item)
+
+    TPETvRatiovEta_TP = ratioTPVsRH_Eta_ET(cPFAX,"TP"); TPETvRatiovEta_TP.SetDirectory(0)
+    TPETvRatiovEta_RH = ratioTPVsRH_Eta_ET(cPFAX,"RH"); TPETvRatiovEta_RH.SetDirectory(0)
 
     # When providing ET ranges it always for PFA2 when in TP basis
     for ieta in xrange(1,29):
@@ -150,47 +167,14 @@ def analysis(PFAXFile, PFA2File):
     ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[0.5,10])
     ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[10, 1000])
 
-    ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[1.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[2.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[3.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[4.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[5.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[6.0],[-28,28])
-
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[1.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[2.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[3.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[4.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[5.0],[-28,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[6.0],[-28,28])
-
     ratioTPVsRH_ET(outFile,TPETvRatiovEta_TP,"TP")
     ratioTPVsRH_ET(outFile,TPETvRatiovEta_RH,"RH")
-
-    ratioTPVsRH_ET(outFile,TPETvRatiovEta_TP,"TP",[1,16])
-    ratioTPVsRH_ET(outFile,TPETvRatiovEta_RH,"RH",[1,16])
-
-    ratioTPVsRH_ET(outFile,TPETvRatiovEta_TP,"TP",[17,28])
-    ratioTPVsRH_ET(outFile,TPETvRatiovEta_RH,"RH",[17,28])
 
     outFile.Close()
    
 if __name__ == '__main__':
 
-    PFAXFile = str(sys.argv[1])
+    PFAXFileDir = str(sys.argv[1])
+    outDir      = str(sys.argv[2])
 
-    subdirs = PFAXFile.split("/")
-
-    # Unfortunately hard code this
-    # But get the companion ntuples for PFA2 to use as a friend
-    for iSubdir in xrange(len(subdirs)):
-        if "PFA" in subdirs[iSubdir]: subdirs[iSubdir] = "PFA2" 
-
-    PFA2File = '/'.join(subdirs[0:-1]) + "/hcalNtuple_PFA2.root"
-
-    if not os.path.exists(PFA2File):
-        print "We need to add PFA2 as a friend but we cannot find \"%s\"!"%(PFA2File)
-        print "Exiting..."
-        quit()
-
-    analysis(PFAXFile, PFA2File)
+    analysis(PFAXFileDir, outDir)
