@@ -130,6 +130,8 @@ else:
         secondaryFileNames = cms.untracked.vstring(),
     )
 
+process.options = cms.untracked.PSet()
+
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
     annotation = cms.untracked.string('analyze nevts:-1'),
