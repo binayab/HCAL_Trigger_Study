@@ -126,7 +126,7 @@ if __name__ == '__main__':
     else:               replaceStr = 's|pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);|containmentCorrection1TS;|g'
 
     subprocess.call(['sed', '-i', replaceStr, filePath])
-    subprocess.call(['scram', 'b', '-j', '8'], cwd=CMSSW_BASE+"/src")
+    subprocess.call(['scram', 'b', '-f', '-j', '8'], cwd=CMSSW_BASE+"/src")
     subprocess.call(["tar", "--exclude-caches-all", "--exclude-vcs", "-zcf", "%s/%s.tar.gz"%(workingDir,CMSSW_VERSION), "-C", "%s/.."%(CMSSW_BASE), CMSSW_VERSION, "--exclude=tmp"])
     
     if args.noSubmit: quit()
