@@ -121,12 +121,25 @@ if __name__ == '__main__':
     # Right here we need to edit a src file in CMSSW and recompile to change the input LUT based on 1TS or 2TS scheme...
     # After that is done, tar up CMSSW and send to the working directory
     CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
+    oneTS = "containmentCorrection1TS;"; twoTS = "pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);"
     filePath = '%s/src/CalibCalorimetry/HcalTPGAlgos/src/HcaluLUTTPGCoder.cc'%(CMSSW_BASE)
-    if "1" not in algo: replaceStr = 's|containmentCorrection1TS;|pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);|g'
-    else:               replaceStr = 's|pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);|containmentCorrection1TS;|g'
 
-    subprocess.call(['sed', '-i', replaceStr, filePath])
-    subprocess.call(['scram', 'b', '-f', '-j', '8'], cwd=CMSSW_BASE+"/src")
+    # Let's be smart and determine if sed has to do a replacement which requires a recompile.
+    recompile = False; replaceStr = ""
+    if "1" not in algo:
+        p = subprocess.Popen(["grep", oneTS, filePath], stdout=subprocess.PIPE)
+        recompile = bool(p.stdout.readline())
+        replaceStr = 's#%s#%s#g'%(oneTS,twoTS)
+    else:
+        p = subprocess.Popen(["grep", twoTS, filePath], stdout=subprocess.PIPE)
+        recompile = bool(p.stdout.readline())
+        replaceStr = 's#%s#%s#g'%(twoTS,oneTS)
+
+    # Only change the file and recompile if necessary
+    if recompile:
+        subprocess.call(['sed', '-i', replaceStr, filePath])
+        subprocess.call(['scram', 'b', '-f', '-j', '8'], cwd=CMSSW_BASE+"/src")
+
     subprocess.call(["tar", "--exclude-caches-all", "--exclude-vcs", "-zcf", "%s/%s.tar.gz"%(workingDir,CMSSW_VERSION), "-C", "%s/.."%(CMSSW_BASE), CMSSW_VERSION, "--exclude=tmp"])
     
     if args.noSubmit: quit()
