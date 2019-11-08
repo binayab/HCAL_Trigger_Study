@@ -6,7 +6,10 @@ TOGGLE=$3
 
 SWITCH="$((2#${CODE}))"
 
-#python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA2
+if (( ${SWITCH}&(2**12) ))
+then
+    python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA2
+fi
 
 if (( ${TOGGLE} == 0 ))
 then
@@ -24,41 +27,41 @@ then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_AVE_DOWN
     fi
     
-    if (( ${SWITCH}&(2**4) ))
+    if (( ${SWITCH}&(2**3) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_PER_IETA
     fi
-    if (( ${SWITCH}&(2**5) ))
+    if (( ${SWITCH}&(2**4) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_PER_IETA_UP
     fi
-    if (( ${SWITCH}&(2**6) ))
+    if (( ${SWITCH}&(2**5) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_PER_IETA_DOWN
     fi
      
-    if (( ${SWITCH}&(2**8) ))
+    if (( ${SWITCH}&(2**6) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_AVE
     fi
-    if (( ${SWITCH}&(2**9) ))
+    if (( ${SWITCH}&(2**7) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_AVE_UP
     fi
-    if (( ${SWITCH}&(2**10) ))
+    if (( ${SWITCH}&(2**8) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_AVE_DOWN
     fi
      
-    if (( ${SWITCH}&(2**12) ))
+    if (( ${SWITCH}&(2**9) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_PER_IETA
     fi
-    if (( ${SWITCH}&(2**13) ))
+    if (( ${SWITCH}&(2**10) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_PER_IETA_UP
     fi
-    if (( ${SWITCH}&(2**14) ))
+    if (( ${SWITCH}&(2**11) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_PER_IETA_DOWN
     fi
@@ -81,41 +84,41 @@ then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_AVE_DOWN
     fi
     
-    if (( ${SWITCH}&(2**4) ))
+    if (( ${SWITCH}&(2**3) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_PER_IETA
     fi
-    if (( ${SWITCH}&(2**5) ))
+    if (( ${SWITCH}&(2**4) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_PER_IETA_UP
     fi
-    if (( ${SWITCH}&(2**6) ))
+    if (( ${SWITCH}&(2**5) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_PER_IETA_DOWN
     fi
     
-    if (( ${SWITCH}&(2**8) ))
+    if (( ${SWITCH}&(2**6) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_AVE
     fi
-    if (( ${SWITCH}&(2**9) ))
+    if (( ${SWITCH}&(2**7) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_AVE_UP
     fi
-    if (( ${SWITCH}&(2**10) ))
+    if (( ${SWITCH}&(2**8) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_AVE_DOWN
     fi
     
-    if (( ${SWITCH}&(2**12) ))
+    if (( ${SWITCH}&(2**9) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_PER_IETA
     fi
-    if (( ${SWITCH}&(2**13) ))
+    if (( ${SWITCH}&(2**10) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_PER_IETA_UP
     fi
-    if (( ${SWITCH}&(2**14) ))
+    if (( ${SWITCH}&(2**11) ))
     then
         python scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_PER_IETA_DOWN
     fi
