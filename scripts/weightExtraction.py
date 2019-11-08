@@ -10,6 +10,7 @@ ROOT.gStyle.SetLineWidth(2)
 ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.gStyle.SetPaintTextFormat("3.2f")
 ROOT.gStyle.SetErrorX(0)
+ROOT.gErrorIgnoreLevel = ROOT.kWarning
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
 
@@ -482,9 +483,9 @@ class WeightExtractor:
                 canvas.SaveAs(outPath + "/WeightCorrelation.pdf")
 
     # Method for drawing histogram of an extracted weight with its fit
-    def drawWeightHisto(self, ieta, depth, iWeight, ts2Cut, weight, statError, systError, weightHisto, histoFit):
+    def drawWeightHisto(self, ieta, depth, iWeight, rebin, ts2Cut, weight, statError, systError, weightHisto, histoFit):
 
-        canvas = ROOT.TCanvas("c_i%d_d%d_w%d_TS2gt%d"%(ieta,depth,iWeight,ts2Cut), "c_i%d_d%d_w%d_TS2gt%d"%(ieta,depth,iWeight,ts2Cut), 2400, 2400); canvas.cd()
+        canvas = ROOT.TCanvas("c_i%d_d%d_w%d_r%d_TS2gt%d"%(ieta,depth,iWeight,rebin,ts2Cut), "c_i%d_d%d_w%d_r%d_TS2gt%d"%(ieta,depth,iWeight,rebin,ts2Cut), 2400, 2400); canvas.cd()
         canvas.SetGridx()
         canvas.SetGridy()
         ROOT.gPad.SetRightMargin(0.03)
@@ -520,7 +521,7 @@ class WeightExtractor:
     
         outPath = "%s/Fits/ieta%d/depth%d/SOI-%d/TS2gt%d"%(self.outPath,ieta,depth,3-iWeight,ts2Cut)
         if not os.path.exists(outPath): os.makedirs(outPath)
-        canvas.SaveAs(outPath + "/WeightDistribution.pdf")
+        canvas.SaveAs(outPath + "/WeightDistribution_rebin%d.pdf"%(rebin))
 
     # Method for getting weights from fit of weight distribution
     def extractFitWeights(self, save=False):
@@ -587,16 +588,18 @@ class WeightExtractor:
 
                             rebinFits[rebin] = theFunc
                             rebinStatErrors[rebin] = meanError / math.sqrt(numEntries) 
+
+                            if rebin != self.rebin: self.drawWeightHisto(ieta, depth, iWeight, rebin, ts2Cut, rebinWeights[rebin], rebinStatErrors[rebin], -1.0, rebinHistos[rebin], rebinFits[rebin])
                             
                         theWeight = rebinWeights[self.rebin]; theStatError = rebinStatErrors[self.rebin]
 
                         # From the five different fits the histogram determine the standard dev of the weights 
-                        theSystError = numpy.std(rebinWeights)
+                        theSystError = numpy.std(rebinWeights[1:])
                         self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theWeight)
                         self.statErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theStatError)
                         self.systErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theSystError)
 
-                        if save: self.drawWeightHisto(ieta, depth, iWeight, ts2Cut, theWeight, theStatError, theSystError, rebinHistos[self.rebin], rebinFits[self.rebin])
+                        if save: self.drawWeightHisto(ieta, depth, iWeight, self.rebin, ts2Cut, theWeight, theStatError, theSystError, rebinHistos[self.rebin], rebinFits[self.rebin])
 
     # Method for calculating the averaged-over-depth weight for each ieta and average-over-depth for HB, HE1, HE2
     def getDepthAverageWeightsAndErrors(self, weightDict, statErrorDict, systErrorDict):
