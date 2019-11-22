@@ -25,7 +25,7 @@ def files4Dataset(dataset):
     return returnFiles 
 
 # Write .sh script to be run by Condor
-def generate_job_steerer(workingDir, algo, outputDir):
+def generate_job_steerer(workingDir, algo, outputDir, CMSSW_VERSION):
 
     scriptFile = open("%s/runJob.sh"%(workingDir), "w")
     scriptFile.write("#!/bin/bash\n\n")
@@ -33,21 +33,21 @@ def generate_job_steerer(workingDir, algo, outputDir):
     scriptFile.write("JOB=$2\n\n")
     scriptFile.write("export SCRAM_ARCH=slc7_amd64_gcc700\n\n")
     scriptFile.write("source /cvmfs/cms.cern.ch/cmsset_default.sh\n") 
-    scriptFile.write("eval `scramv1 project CMSSW CMSSW_10_6_0_pre4`\n\n")
-    scriptFile.write("tar -xf CMSSW_10_6_0_pre4.tar.gz\n")
-    scriptFile.write("rm CMSSW_10_6_0_pre4.tar.gz\n")
-    scriptFile.write("mv algo_weights.py analyze_HcalTrig.py CMSSW_10_6_0_pre4/src\n\n")
-    scriptFile.write("cd CMSSW_10_6_0_pre4/src\n")
+    scriptFile.write("eval `scramv1 project CMSSW %s`\n\n"%(CMSSW_VERSION))
+    scriptFile.write("tar -xf %s.tar.gz\n"%(CMSSW_VERSION))
+    scriptFile.write("rm %s.tar.gz\n"%(CMSSW_VERSION))
+    scriptFile.write("mv algo_weights.py analyze_HcalTrig.py %s/src\n\n"%(CMSSW_VERSION))
+    scriptFile.write("cd %s/src\n"%(CMSSW_VERSION))
     scriptFile.write("scramv1 b ProjectRename\n")
     scriptFile.write("eval `scramv1 runtime -sh`\n\n")
     scriptFile.write("cmsRun analyze_HcalTrig.py %s ${INPUTFILE} ${JOB}\n\n"%(algo))
     scriptFile.write("xrdcp -f hcalNtuple_${JOB}.root %s 2>&1\n"%(outputDir))
     scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
-    scriptFile.write("rm -r CMSSW_10_6_0_pre4\n")
+    scriptFile.write("rm -r %s\n"%(CMSSW_VERSION))
     scriptFile.close()
 
 # Write Condor submit file 
-def generate_condor_submit(workingDir, inputFiles):
+def generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION):
 
     condorSubmit = open("%s/condorSubmit.jdl"%(workingDir), "w")
     condorSubmit.write("Executable           =  %s/runJob.sh\n"%(workingDir))
@@ -58,7 +58,7 @@ def generate_condor_submit(workingDir, inputFiles):
     condorSubmit.write("Error                =  %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
     condorSubmit.write("Log                  =  %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
     condorSubmit.write("x509userproxy        =  $ENV(X509_USER_PROXY)\n")
-    condorSubmit.write("Transfer_Input_Files =  %s/analyze_HcalTrig.py, %s/algo_weights.py, %s/CMSSW_10_6_0_pre4.tar.gz\n\n"%(workingDir, workingDir, workingDir))
+    condorSubmit.write("Transfer_Input_Files =  %s/analyze_HcalTrig.py, %s/algo_weights.py, %s/%s.tar.gz\n\n"%(workingDir, workingDir, workingDir, CMSSW_VERSION))
 
     iJob = 0
     for inputFile in inputFiles:
@@ -111,18 +111,20 @@ if __name__ == '__main__':
 
     # Create directories to save logs
     os.makedirs("%s/logs"%(workingDir))
+    
+    # Get CMSSW environment
+    CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
 
     # Make the .sh to run the show
-    generate_job_steerer(workingDir, algo, outputDir)
+    generate_job_steerer(workingDir, algo, outputDir, CMSSW_VERSION)
 
     # Make the jdl to hold condor's hand
-    generate_condor_submit(workingDir, inputFiles)
+    generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION)
 
     subprocess.call(["chmod", "+x", "%s/runJob.sh"%(workingDir)])
 
     # Right here we need to edit a src file in CMSSW and recompile to change the input LUT based on 1TS or 2TS scheme...
     # After that is done, tar up CMSSW and send to the working directory
-    CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
     oneTS = "containmentCorrection1TS;"; twoTS = "pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);"
     filePath = '%s/src/CalibCalorimetry/HcalTPGAlgos/src/HcaluLUTTPGCoder.cc'%(CMSSW_BASE)
 
