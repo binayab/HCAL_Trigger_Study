@@ -155,8 +155,6 @@ def draw2DHistoAndProfile(canvas, keyName, histoName, zMax, color, markerStyle, 
         if gPFAXUp and gPFAXDown and gPFAXBand:
             ROOT.SetOwnership(gPFAXBand, False)
             gPFAXBand.Draw("F")
-            #c1.Update()
-            #c1.Modified()
 
     return drewRatio
 
@@ -225,7 +223,7 @@ if __name__ == '__main__':
 
         if "TH2" in className:
             zMax = 0
-            if "RHET" in name: zMax = 8e3
+            if "RHET" in name: zMax = 8e4
             else:              zMax = 5e3
             
             c1 = ROOT.TCanvas("%s"%(name), "%s"%(name), 2400, 1440); c1.cd(); c1.SetLogz()
@@ -265,8 +263,8 @@ if __name__ == '__main__':
             theStack = ROOT.THStack("theStack_%s"%(name), ""); theStack.Draw()
 
             if "PFAX1" in MAPPFAHISTOS: t_pfaX1 = draw1DHisto(c1, theStack, "PFAX1", name, args.pfaX1.split("/")[3], ROOT.kBlack , 0.75, 0.75, 0.95, 0.90)
-            if "PFAX2" in MAPPFAHISTOS: t_pfaX2 = draw1DHisto(c1, theStack, "PFAX2", name, args.pfaX2.split("/")[3], ROOT.kGray+2, 0.75, 0.39, 0.95, 0.54)
-            if "PFAY"  in MAPPFAHISTOS: t_pfaY  = draw1DHisto(c1, theStack, "PFAY" , name, args.pfaY.split("/")[3] , ROOT.kRed   , 0.75, 0.57, 0.95, 0.72)
+            if "PFAX2" in MAPPFAHISTOS: t_pfaX2 = draw1DHisto(c1, theStack, "PFAX2", name, args.pfaX2.split("/")[3], ROOT.kRed, 0.75, 0.39, 0.95, 0.54)
+            if "PFAY"  in MAPPFAHISTOS: t_pfaY  = draw1DHisto(c1, theStack, "PFAY" , name, args.pfaY.split("/")[3] , ROOT.kGray+2   , 0.75, 0.57, 0.95, 0.72)
 
             prettyHisto(theStack, 0.042, 0.042, 0.042, 0.052, 0.052, 0.052, 1.06, 1.4, 1.0)
             theStack.Draw("HISTO NOSTACK")

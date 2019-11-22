@@ -76,9 +76,11 @@ if __name__ == '__main__':
     parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
     parser.add_argument("--pfa"     , dest="pfa"     , help="Which PFA to use"        , type=str , required=True)
     parser.add_argument("--dataset" , dest="dataset" , help="Unique path to dataset"  , type=str , default="50PU")
+    parser.add_argument("--tag"     , dest="tag"     , help="Unique tag"              , type=str , default="NULL")
     args = parser.parse_args()
 
     algo     = args.pfa
+    tag      = args.tag
     dataset  = args.dataset
     noSubmit = args.noSubmit
    
@@ -93,8 +95,8 @@ if __name__ == '__main__':
         inputFiles = files4Dataset(dataset)
         physProcess = dataset.split("/")[1].split("_")[0]
     
-    outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s/%s"%(physProcess, algo)
-    workingDir = "%s/condor/%s_%s_%s"%(hcalDir, physProcess, algo, taskDir)
+    outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s/%s/%s"%(physProcess, tag, algo)
+    workingDir = "%s/condor/%s_%s_%s_%s"%(hcalDir, physProcess, algo, tag, taskDir)
     
     # After defining the directory to work the job in and output to, make them
     subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])

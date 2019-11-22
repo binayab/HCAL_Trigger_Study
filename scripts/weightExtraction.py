@@ -594,7 +594,7 @@ class WeightExtractor:
                         theWeight = rebinWeights[self.rebin]; theStatError = rebinStatErrors[self.rebin]
 
                         # From the five different fits the histogram determine the standard dev of the weights 
-                        theSystError = numpy.std(rebinWeights[1:])
+                        theSystError = abs(numpy.amax(rebinWeights[1:])-numpy.amin(rebinWeights[1:]))
                         self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theWeight)
                         self.statErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theStatError)
                         self.systErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theSystError)
@@ -610,7 +610,7 @@ class WeightExtractor:
         for ieta in self.HBHEieta:
             ietaDensityDepthSum[ieta] = 0 
             for iWeight in self.iWeights:
-                depthAverageWeights.setdefault(ieta, {}).setdefault(iWeight, 0.0)
+                depthAverageWeights.setdefault(ieta, {}).setdefault(iWeight, -999)
                 depthAverageStatErrors.setdefault(ieta, {}).setdefault(iWeight, 0.0)
                 depthAverageSystErrors.setdefault(ieta, {}).setdefault(iWeight, 0.0)
 
@@ -618,7 +618,7 @@ class WeightExtractor:
         subDetDensity = {"HB" : 0, "HE1" : 0, "HE2" : 0}
         for det, wDict in subDetDepthAverageWeights.iteritems():
             for iWeight in self.iWeights:
-                subDetDepthAverageWeights[det][iWeight] = 0.0 
+                subDetDepthAverageWeights[det][iWeight]    = -999 
                 subDetDepthAverageStatErrors[det][iWeight] = 0.0 
                 subDetDepthAverageSystErrors[det][iWeight] = 0.0 
 
@@ -642,11 +642,16 @@ class WeightExtractor:
                 for iWeight in weightDict[depth][ieta].keys():
 
                     # Not very clean way of getting weight from extra dictionary or not
-                    weight = weightDict[depth][ieta][iWeight][self.ts2Cut]
+                    weight    = weightDict[depth][ieta][iWeight][self.ts2Cut]
                     statError = statErrorDict[depth][ieta][iWeight][self.ts2Cut]
                     systError = systErrorDict[depth][ieta][iWeight][self.ts2Cut]
 
                     if weight == -999: continue
+                    
+                    if depthAverageWeights[ieta][iWeight]        == -999: depthAverageWeights[ieta][iWeight] += 999
+                    if subDetDepthAverageWeights["HB"][iWeight]  == -999: subDetDepthAverageWeights["HB"][iWeight] += 999
+                    if subDetDepthAverageWeights["HE1"][iWeight] == -999: subDetDepthAverageWeights["HE1"][iWeight] += 999
+                    if subDetDepthAverageWeights["HE2"][iWeight] == -999: subDetDepthAverageWeights["HE2"][iWeight] += 999
 
                     depthAverageWeights[ieta][iWeight] += weight * depthTPs / float(ietaDensityDepthSum[ieta])
                     if   ieta in self.HBieta:  subDetDepthAverageWeights["HB"][iWeight]  += weight * depthTPs / float(subDetDensity["HB"])
@@ -678,87 +683,105 @@ class WeightExtractor:
         averagePulseDepthAverageSystErrors, averagePulseSubdetDepthAverageStatErrors, averagePulseSubdetDepthAverageSystErrors \
         = self.getDepthAverageWeightsAndErrors(self.averagePulseWeights, self.averagePulseStatErrors, self.averagePulseSystErrors)
 
-        for depth in self.depths:
-            str2Write = "\nDepth %d:\n"%(depth); str2WriteAve = "\nDepth %d:\n"%(depth)
+        emptyStr = "              -               & "
+        for iWeight in self.iWeights:
+            str2Write = "\nwSOI-%d:\n"%(3-iWeight); str2WriteAve = str2Write
 
             for ieta in self.HBHEieta:
                 ietaStr = "%d"%(ieta)
                 ietaStr = ietaStr.rjust(2)
 
-                str2WriteAve += "ieta: %s   "%(ietaStr)
-                for iWeight in reversed(self.averagePulseWeights[depth][ieta].keys()):
-                    if self.averagePulseWeights[depth][ieta][iWeight][self.ts2Cut] == -999:
-                        str2WriteAve += ". . . . . . . . . . . . . . . .   " 
-                    else:
-                        weightStr = "%3.2f"%(self.averagePulseWeights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
-                        statError = self.averagePulseStatErrors[depth][ieta][iWeight][self.ts2Cut]
-                        systError = self.averagePulseSystErrors[depth][ieta][iWeight][self.ts2Cut]
-                        str2WriteAve += "wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError)
-                str2WriteAve += "\n"
-
-                str2Write += "ieta: %s   "%(ietaStr)
-                for iWeight in reversed(self.fitWeights[depth][ieta].keys()):
-                    if self.fitWeights[depth][ieta][iWeight][self.ts2Cut] == -999: 
-                        str2Write += ". . . . . . . . . . . . . . . . . . .   " 
-                    else: 
-                        weightStr = "%3.2f"%(self.fitWeights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
-                        statError = self.statErrors[depth][ieta][iWeight][self.ts2Cut]
-                        systError = self.systErrors[depth][ieta][iWeight][self.ts2Cut]
-                        str2Write += "wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError)
-                str2Write += "\n"
-
-            aveSummary.write(str2WriteAve)
-            summary.write(str2Write)
-
-        summary.write("\n\n"); aveSummary.write("\n\n")
-        for ieta, weightDict in depthAverageWeights.iteritems():
-            ietaStr = "%d"%(ieta)
-            ietaStr = ietaStr.rjust(2)
-            summary.write("ieta: %s   "%(ietaStr)); aveSummary.write("ieta: %s   "%(ietaStr));
-
-            for iWeight in reversed(weightDict.keys()):
-                if weightDict[iWeight] == -999:
-                    summary.write(". . . . . . . . . . . . . . . . . . . .  ")
-                else:
-                    statError = depthAverageStatErrors[ieta][iWeight]
-                    systError = depthAverageSystErrors[ieta][iWeight]
-                    weightStr = "%3.2f"%(weightDict[iWeight]); weightStr = weightStr.rjust(5)
-                    summary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
-
+                str2Write += "ieta: %s   "%(ietaStr); str2WriteAve += "ieta: %s   "%(ietaStr)
+                
                 if averagePulseDepthAverageWeights[ieta][iWeight] == -999:
-                     aveSummary.write(". . . . . . . . . . . . . . . . . .  ")
+                     str2WriteAve += emptyStr
                 else:
                     statError = averagePulseDepthAverageStatErrors[ieta][iWeight]
                     systError = averagePulseDepthAverageSystErrors[ieta][iWeight]
                     weightStr = "%3.2f"%(averagePulseDepthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
-                    aveSummary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
-            summary.write("\n"); aveSummary.write("\n")
+                    str2WriteAve += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
 
-        summary.write("\n\n"); aveSummary.write("\n\n")
-        for det, weightDict in subdetDepthAverageWeights.iteritems():
-            detStr = "%s"%(det)
-            detStr = detStr.rjust(3)
-            summary.write("%s:   "%(detStr)); aveSummary.write("%s:   "%(detStr));
+                for depth in self.depths:
+                    if self.averagePulseWeights[depth][ieta][iWeight][self.ts2Cut] == -999:
+                        str2WriteAve += emptyStr 
+                    else:
+                        weightStr = "%3.2f"%(self.averagePulseWeights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
+                        statError = self.averagePulseStatErrors[depth][ieta][iWeight][self.ts2Cut]
+                        systError = self.averagePulseSystErrors[depth][ieta][iWeight][self.ts2Cut]
+                        str2WriteAve += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
+                str2WriteAve += "\n"
 
-            for iWeight in reversed(weightDict.keys()):
+                if depthAverageWeights[ieta][iWeight] == -999:
+                    str2Write += emptyStr
+                else:
+                    statError = depthAverageStatErrors[ieta][iWeight]
+                    systError = depthAverageSystErrors[ieta][iWeight]
+                    weightStr = "%3.2f"%(depthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
+                    str2Write += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
+
+                for depth in self.depths:
+                    if self.fitWeights[depth][ieta][iWeight][self.ts2Cut] == -999: 
+                        str2Write += emptyStr 
+                    else: 
+                        weightStr = "%3.2f"%(self.fitWeights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
+                        statError = self.statErrors[depth][ieta][iWeight][self.ts2Cut]
+                        systError = self.systErrors[depth][ieta][iWeight][self.ts2Cut]
+                        str2Write += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
+                str2Write += "\n"
+
+            str2Write += "\n"; str2WriteAve += "\n"
+            for det, weightDict in subdetDepthAverageWeights.iteritems():
+                detStr = "%s"%(det)
+                detStr = detStr.rjust(8)
+                detStr += "   "
+                str2Write += detStr; str2WriteAve += detStr
+           
                 if weightDict[iWeight] == -999:
-                    summary.write(". . . . . . . . . . . . . . . . . .  ")
+                    str2Write += emptyStr
                 else:
                     statError = subdetDepthAverageStatErrors[det][iWeight]
                     systError = subdetDepthAverageSystErrors[det][iWeight]
                     weightStr = "%3.2f"%(weightDict[iWeight]); weightStr = weightStr.rjust(5)
-                    summary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
+                    str2Write += "$%s_{\pm %3.2f}^{\pm %3.2f}$  "%(weightStr,statError,systError)
 
                 if averagePulseSubdetDepthAverageWeights[det][iWeight] == -999:
-                     aveSummary.write(". . . . . . . . . . . . . . . .  ")
+                     str2WriteAve += emptyStr
                 else:
                     statError = averagePulseSubdetDepthAverageStatErrors[det][iWeight]
                     systError = averagePulseSubdetDepthAverageSystErrors[det][iWeight]
                     weightStr = "%3.2f"%(averagePulseSubdetDepthAverageWeights[det][iWeight]); weightStr = weightStr.rjust(5)
-                    aveSummary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
-            summary.write("\n"); aveSummary.write("\n")
+                    str2WriteAve += "$%s_{\pm %3.2f}^{\pm %3.2f}$  "%(weightStr,statError,systError)
+                str2Write += "\n"; str2WriteAve += "\n"
 
-        summary.close()
+            aveSummary.write(str2WriteAve)
+            summary.write(str2Write)                   
+                    
+        summary.write("\n\n"); aveSummary.write("\n\n")
+
+        #for det, weightDict in subdetDepthAverageWeights.iteritems():
+        #    detStr = "%s"%(det)
+        #    detStr = detStr.rjust(3)
+        #    summary.write("%s:   "%(detStr)); aveSummary.write("%s:   "%(detStr));
+
+        #    for iWeight in reversed(weightDict.keys()):
+        #        if weightDict[iWeight] == -999:
+        #            summary.write(". . . . . . . . . . . . . . . . . .  ")
+        #        else:
+        #            statError = subdetDepthAverageStatErrors[det][iWeight]
+        #            systError = subdetDepthAverageSystErrors[det][iWeight]
+        #            weightStr = "%3.2f"%(weightDict[iWeight]); weightStr = weightStr.rjust(5)
+        #            summary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
+
+        #        if averagePulseSubdetDepthAverageWeights[det][iWeight] == -999:
+        #             aveSummary.write(". . . . . . . . . . . . . . . .  ")
+        #        else:
+        #            statError = averagePulseSubdetDepthAverageStatErrors[det][iWeight]
+        #            systError = averagePulseSubdetDepthAverageSystErrors[det][iWeight]
+        #            weightStr = "%3.2f"%(averagePulseSubdetDepthAverageWeights[det][iWeight]); weightStr = weightStr.rjust(5)
+        #            aveSummary.write("wSOI-%d: $%s_{\pm %3.2f}^{\pm %3.2f}$  "%(3-iWeight,weightStr,statError,systError))
+        #    summary.write("\n"); aveSummary.write("\n")
+
+        summary.close(); aveSummary.close()
 
 if __name__ == '__main__':
 
