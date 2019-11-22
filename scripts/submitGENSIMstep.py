@@ -7,7 +7,7 @@ from time import strftime
 random.seed()
 
 # Write .sh script to be run by Condor
-def generate_job_steerer(workingDir, step1, outputDir):
+def generate_job_steerer(workingDir, step1, outputDir, CMSSW_VERSION):
 
     scriptFile = open("%s/runJob.sh"%(workingDir), "w")
     scriptFile.write("#!/bin/bash\n\n")
@@ -15,21 +15,21 @@ def generate_job_steerer(workingDir, step1, outputDir):
     scriptFile.write("EVENTS=$2\n\n")
     scriptFile.write("export SCRAM_ARCH=slc7_amd64_gcc700\n\n")
     scriptFile.write("source /cvmfs/cms.cern.ch/cmsset_default.sh\n") 
-    scriptFile.write("eval `scramv1 project CMSSW CMSSW_10_6_1_patch1`\n\n")
-    scriptFile.write("tar -xf CMSSW_10_6_1_patch1.tar.gz\n")
-    scriptFile.write("rm CMSSW_10_6_1_patch1.tar.gz\n")
-    scriptFile.write("mv %s CMSSW_10_6_1_patch1/src\n"%(step1))
-    scriptFile.write("cd CMSSW_10_6_1_patch1/src\n")
+    scriptFile.write("eval `scramv1 project CMSSW %s`\n\n"%(CMSSW_VERSION))
+    scriptFile.write("tar -xf %s.tar.gz\n"%(CMSSW_VERSION))
+    scriptFile.write("rm %s.tar.gz\n"%(CMSSW_VERSION))
+    scriptFile.write("mv %s %s/src\n"%(step1,CMSSW_VERSION))
+    scriptFile.write("cd %s/src\n"%(CMSSW_VERSION))
     scriptFile.write("scramv1 b ProjectRename\n")
     scriptFile.write("eval `scramv1 runtime -sh`\n\n")
     scriptFile.write("cmsRun %s ${SEED} ${EVENTS}\n\n"%(step1))
     scriptFile.write("xrdcp -f step1.root %s/${SEED}.root 2>&1\n"%(outputDir))
     scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
-    scriptFile.write("rm -r CMSSW_10_6_1_patch1\n")
+    scriptFile.write("rm -r %s\n"%(CMSSW_VERSION))
     scriptFile.close()
 
 # Write Condor submit file 
-def generate_condor_submit(workingDir, step1, eventsPerJob, njobs):
+def generate_condor_submit(workingDir, step1, eventsPerJob, njobs, CMSSW_VERSION):
 
     condorSubmit = open("%s/condorSubmit.jdl"%(workingDir), "w")
     condorSubmit.write("Executable           =  %s/runJob.sh\n"%(workingDir))
@@ -40,7 +40,7 @@ def generate_condor_submit(workingDir, step1, eventsPerJob, njobs):
     condorSubmit.write("Error                =  %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
     condorSubmit.write("Log                  =  %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
     condorSubmit.write("x509userproxy        =  $ENV(X509_USER_PROXY)\n")
-    condorSubmit.write("Transfer_Input_Files =  %s/%s, %s/CMSSW_10_6_1_patch1.tar.gz\n\n"%(workingDir, step1, workingDir))
+    condorSubmit.write("Transfer_Input_Files =  %s/%s, %s/%s.tar.gz\n\n"%(workingDir, step1, workingDir, CMSSW_VERSION))
 
     for iJob in xrange(0, njobs):
         
@@ -95,15 +95,17 @@ if __name__ == '__main__':
     # Create directories to save logs
     os.makedirs("%s/logs"%(workingDir))
 
+    # Get CMSSW environment
+    CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
+
     # Make the .sh to run the show
-    generate_job_steerer(workingDir, step1, outputDir)
+    generate_job_steerer(workingDir, step1, outputDir, CMSSW_VERSION)
 
     # Make the jdl to hold condor's hand
-    generate_condor_submit(workingDir, step1, eventsPerJob, njobs)
+    generate_condor_submit(workingDir, step1, eventsPerJob, njobs, CMSSW_VERSION)
 
     subprocess.call(["chmod", "+x", "%s/runJob.sh"%(workingDir)])
 
-    CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
     subprocess.call(["tar", "--exclude-caches-all", "--exclude-vcs", "-zcf", "%s/%s.tar.gz"%(workingDir,CMSSW_VERSION), "-C", "%s/.."%(CMSSW_BASE), CMSSW_VERSION, "--exclude=tmp", "--exclude=src"])
     
     if args.noSubmit: quit()
