@@ -3,7 +3,7 @@
 CODE=$1
 SELECT=$2
 
-NTUPLES="${HOME}/nobackup/HCAL_Trigger_Study/hcalNtuples/"
+NTUPLES="/eos/uscms/store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/"
 PROCESS=$3
 
 INPUTDIR="${NTUPLES}/${PROCESS}"
