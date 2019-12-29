@@ -12,7 +12,8 @@ def generate_job_steerer(workingDir, step1, outputDir, CMSSW_VERSION):
     scriptFile = open("%s/runJob.sh"%(workingDir), "w")
     scriptFile.write("#!/bin/bash\n\n")
     scriptFile.write("SEED=$1\n")
-    scriptFile.write("EVENTS=$2\n\n")
+    scriptFile.write("EVENTS=$2\n")
+    scriptFile.write("RUN=$3\n\n")
     scriptFile.write("export SCRAM_ARCH=slc7_amd64_gcc700\n\n")
     scriptFile.write("source /cvmfs/cms.cern.ch/cmsset_default.sh\n") 
     scriptFile.write("eval `scramv1 project CMSSW %s`\n\n"%(CMSSW_VERSION))
@@ -22,7 +23,7 @@ def generate_job_steerer(workingDir, step1, outputDir, CMSSW_VERSION):
     scriptFile.write("cd %s/src\n"%(CMSSW_VERSION))
     scriptFile.write("scramv1 b ProjectRename\n")
     scriptFile.write("eval `scramv1 runtime -sh`\n\n")
-    scriptFile.write("cmsRun %s ${SEED} ${EVENTS}\n\n"%(step1))
+    scriptFile.write("cmsRun %s ${SEED} ${EVENTS} ${RUN}\n\n"%(step1))
     scriptFile.write("xrdcp -f step1.root %s/${SEED}.root 2>&1\n"%(outputDir))
     scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
     scriptFile.write("rm -r %s\n"%(CMSSW_VERSION))
@@ -48,7 +49,7 @@ def generate_condor_submit(workingDir, step1, eventsPerJob, njobs, CMSSW_VERSION
 
         seedStr = "%s"%(seed); seedStr = seedStr.rjust(10, "0")
 
-        condorSubmit.write("Arguments       = %s %d\n"%(seedStr, eventsPerJob))
+        condorSubmit.write("Arguments       = %s %d %d\n"%(seedStr, eventsPerJob, iJob+1))
         condorSubmit.write("Queue\n\n")
 
     condorSubmit.close()

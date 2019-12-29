@@ -6,6 +6,7 @@ import sys
 
 seed = int(sys.argv[2])
 events = int(sys.argv[3])
+run = int(sys.argv[4])
 
 process = cms.Process('SIM',Run3)
 
@@ -29,10 +30,10 @@ process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(events)
 )
 
-process.RandomNumberGeneratorService.generator.initialSeed = int(seed)
+process.RandomNumberGeneratorService.generator.initialSeed = seed
 
 # Input source
-process.source = cms.Source("EmptySource")
+process.source = cms.Source("EmptySource", firstRun = cms.untracked.uint32(run))
 
 process.options = cms.untracked.PSet(
 
