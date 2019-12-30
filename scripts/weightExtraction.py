@@ -22,11 +22,11 @@ class WeightExtractor:
         self.cacheLoc = "%s/root"%(outputPath) # Location to cache histograms in root file
 
         # _My_ use of word "sample" is any TS >= SOI
-        if scheme == "PFA2p":
-            self.tpPresamples = 2          # PFA2p uses two presamples
+        if scheme == "PFA2pp":
+            self.tpPresamples = 2          # PFA2pp uses two presamples
             self.tpSamples = 2             # SOI and SOI+1 are used to sample non-PU pulse
-        elif scheme == "PFA3p":
-            self.tpPresamples = 1          # PFA3p uses two SOI and SOI+1 fully and SOI-1 presample
+        elif scheme == "PFA2p":
+            self.tpPresamples = 1          # PFA2p uses two SOI and SOI+1 fully and SOI-1 presample
             self.tpSamples = 2             # SOI and SOI+1 are used to sample non-PU pulse
         elif scheme == "PFA1p":
             self.tpPresamples = 1          # PFA1 uses SOI fully and SOI-1 presample to subtract
@@ -441,9 +441,10 @@ class WeightExtractor:
     
                     canvas.SetLogz()
 
-                    outPath = "%s/PulseShapes/ieta%d/depth%d/TS2gt%d/%s"%(self.outPath,ieta,depth,ts2Cut,category)
-                    if not os.path.exists(outPath): os.makedirs(outPath)
-                    canvas.SaveAs(outPath + "/AveragePulse.pdf")
+                    if ts2Cut == 0:
+                        outPath = "%s/PulseShapes/ieta%d/depth%d/TS2gt%d/%s"%(self.outPath,ieta,depth,ts2Cut,category)
+                        if not os.path.exists(outPath): os.makedirs(outPath)
+                        canvas.SaveAs(outPath + "/AveragePulse.pdf")
 
     # Method for drawing histogram of correlation between wSOI-1 and wSOI-2
     def drawWeightCorrs(self):
@@ -765,18 +766,26 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--tag"       , dest="tag"       , help="Unique tag for output" , type=str     , default="TAG")
     parser.add_argument("--fromCache" , dest="fromCache" , help="Read from cache file"  , default=False, action="store_true")
+    parser.add_argument("--contain"   , dest="contain"   , help="With pulse containment", default=False, action="store_true")
+    parser.add_argument("--depth"     , dest="depth"     , help="Extract with depth"    , default=False, action="store_true")
     parser.add_argument("--algo"      , dest="algo"      , help="Which reco scheme"     , type=str     , default="ALGO")
     parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"      , type=int     , nargs="+", default=[-1,1])
     
     arg = parser.parse_args()
+
+    containStr = "NoContain"
+    if arg.contain: containStr = "Contain"
+
+    depthStr = "NoDepth"
+    if arg.depth: depthStr = "Depth"
 
     gFromCache = arg.fromCache
     eventRange = xrange(arg.evtRange[0], arg.evtRange[0]+arg.evtRange[1]) 
 
     aPath = ""; outPath = "./plots/Weights/%s/TP/%s"%(arg.algo,arg.tag)
                 
-    PUFile   = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/NoDepth/OOT.root"
-    noPUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/NoContain/NoDepth/NOPU.root"
+    PUFile   = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/%s/%s/OOT.root"%(containStr, depthStr)
+    noPUFile = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/%s/%s/NOPU.root"%(containStr, depthStr)
 
     theExtractor = WeightExtractor(arg.algo, PUFile, noPUFile, outPath)
     theExtractor.eventLoop(eventRange)
