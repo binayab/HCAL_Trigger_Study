@@ -266,46 +266,6 @@ class WeightExtractor:
 
             f.Close()
 
-    # Method for extracting weights based on the average pulse shape in each ieta ring, depth
-    def extractAveragePulseWeights(self):
-
-        for depth in self.depths:
-            for ieta in self.HBHEieta:
-                for ts2Cut in self.ts2Cuts:
-
-                    puPulse   = numpy.zeros((8,1)); puPulseErrors   = numpy.zeros((8,1))
-                    nopuPulse = numpy.zeros((8,1)); nopuPulseErrors = numpy.zeros((8,1))
-
-                    avePUpulse   = self.pulseShapesPU[depth][ieta][ts2Cut].ProfileX("i%d_d%d_TSgt%d_PU_prof"%(ieta,depth,ts2Cut), 1, -1)
-                    aveNOPUpulse = self.pulseShapesNOPU[depth][ieta][ts2Cut].ProfileX("i%d_d%d_TSgt%d_NOPU_prof"%(ieta,depth,ts2Cut), 1, -1)
-
-                    for ts in xrange(avePUpulse.GetNbinsX()):
-                        puPulse[ts]       = avePUpulse.GetBinContent(ts+1)
-                        puPulseErrors[ts] = avePUpulse.GetBinError(ts+1)
-
-                    for ts in xrange(aveNOPUpulse.GetNbinsX()):
-                        nopuPulse[ts]       = aveNOPUpulse.GetBinContent(ts+1)
-                        nopuPulseErrors[ts] = aveNOPUpulse.GetBinError(ts+1)
-
-                    weights = self.extractWeights(puPulse, nopuPulse)
-                    for ts in xrange(0, weights.size): self.averagePulseWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts+1, {}).setdefault(ts2Cut, weights[ts])
-
-                    weightErrors = self.getAveragePulseStatError(puPulse, nopuPulse, puPulseErrors, nopuPulseErrors)
-                    self.averagePulseStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(1, {}).setdefault(ts2Cut, weightErrors[0])
-                    self.averagePulseStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(2, {}).setdefault(ts2Cut, weightErrors[1])
-
-                for iWeight in self.iWeights:
-
-                    # Use different selections on SOI-1 to derive systematic for average pulse weights
-                    averagePulseWeights = [] 
-                    for ts2Cut in self.ts2Cuts:
-                        if self.averagePulseWeights[depth][ieta][iWeight][ts2Cut] != -999:
-                            averagePulseWeights.append(self.averagePulseWeights[depth][ieta][iWeight][ts2Cut])
-                    
-                    for ts2Cut in self.ts2Cuts:
-                        if averagePulseWeights == []: self.averagePulseSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
-                        else: self.averagePulseSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, numpy.std(averagePulseWeights))
-
     def extractWeights(self, puPulse, nopuPulse):
 
         # Don't try to extract weights with an empty pulse
@@ -377,23 +337,6 @@ class WeightExtractor:
         if ifPrint and int(W[1]) == W[1]: print toPrint
 
         return W
-
-    # Method for propagating errors in average pulses to average pulse-derived weight(s)
-    def getAveragePulseStatError(self, puPulse, nopuPulse, puPulseErrors, nopuPulseErrors):
-
-        weightErrors = numpy.zeros((2,1))
-        if numpy.count_nonzero(nopuPulse) == 0 or numpy.count_nonzero(puPulse) == 0: 
-
-            weightErrors = numpy.zeros((2,1))
-            weightErrors[0] = -999; weightErrors[1] = -999
-
-        else: 
-
-            w2Error = math.sqrt(nopuPulseErrors[3]**2 + nopuPulseErrors[4]**2 + puPulseErrors[3]**2 + puPulseErrors[4]**2) / puPulse[2]
-            weightErrors[0] = -999
-            weightErrors[1] = w2Error
-
-        return weightErrors
 
     # Method for drawing average pulse for given pileup scenario
     def drawPulseShapes(self, category):
@@ -675,44 +618,21 @@ class WeightExtractor:
     # Method for writing out a text file summarizing all the extracted weights
     def getWeightSummary(self):
 
-        aveSummary = open("%s/aveWeightSummary.txt"%(self.outPath), "w")
         summary = open("%s/weightSummary.txt"%(self.outPath), "w")
 
         depthAverageWeights, subdetDepthAverageWeights, depthAverageStatErrors, \
         depthAverageSystErrors, subdetDepthAverageStatErrors, subdetDepthAverageSystErrors = self.getDepthAverageWeightsAndErrors(self.fitWeights, self.statErrors, self.systErrors)
 
-        averagePulseDepthAverageWeights, averagePulseSubdetDepthAverageWeights, averagePulseDepthAverageStatErrors, \
-        averagePulseDepthAverageSystErrors, averagePulseSubdetDepthAverageStatErrors, averagePulseSubdetDepthAverageSystErrors \
-        = self.getDepthAverageWeightsAndErrors(self.averagePulseWeights, self.averagePulseStatErrors, self.averagePulseSystErrors)
-
         emptyStr = "              -               & "
         for iWeight in self.iWeights:
-            str2Write = "\nwSOI-%d:\n"%(3-iWeight); str2WriteAve = str2Write
+            str2Write = "\nwSOI-%d:\n"%(3-iWeight)
 
             for ieta in self.HBHEieta:
                 ietaStr = "%d"%(ieta)
                 ietaStr = ietaStr.rjust(2)
 
-                str2Write += "ieta: %s   "%(ietaStr); str2WriteAve += "ieta: %s   "%(ietaStr)
+                str2Write += "ieta: %s   "%(ietaStr)
                 
-                if averagePulseDepthAverageWeights[ieta][iWeight] == -999:
-                     str2WriteAve += emptyStr
-                else:
-                    statError = averagePulseDepthAverageStatErrors[ieta][iWeight]
-                    systError = averagePulseDepthAverageSystErrors[ieta][iWeight]
-                    weightStr = "%3.2f"%(averagePulseDepthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
-                    str2WriteAve += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
-
-                for depth in self.depths:
-                    if self.averagePulseWeights[depth][ieta][iWeight][self.ts2Cut] == -999:
-                        str2WriteAve += emptyStr 
-                    else:
-                        weightStr = "%3.2f"%(self.averagePulseWeights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
-                        statError = self.averagePulseStatErrors[depth][ieta][iWeight][self.ts2Cut]
-                        systError = self.averagePulseSystErrors[depth][ieta][iWeight][self.ts2Cut]
-                        str2WriteAve += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
-                str2WriteAve += "\n"
-
                 if depthAverageWeights[ieta][iWeight] == -999:
                     str2Write += emptyStr
                 else:
@@ -731,13 +651,12 @@ class WeightExtractor:
                         str2Write += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
                 str2Write += "\n"
 
-            str2Write += "\n"; str2WriteAve += "\n"
+            str2Write += "\n"
             for det, weightDict in subdetDepthAverageWeights.iteritems():
                 detStr = "%s"%(det)
                 detStr = detStr.rjust(8)
                 detStr += "   "
-                str2Write += detStr; str2WriteAve += detStr
-           
+                str2Write += detStr           
                 if weightDict[iWeight] == -999:
                     str2Write += emptyStr
                 else:
@@ -746,21 +665,12 @@ class WeightExtractor:
                     weightStr = "%3.2f"%(weightDict[iWeight]); weightStr = weightStr.rjust(5)
                     str2Write += "$%s_{\pm %3.2f}^{\pm %3.2f}$  "%(weightStr,statError,systError)
 
-                if averagePulseSubdetDepthAverageWeights[det][iWeight] == -999:
-                     str2WriteAve += emptyStr
-                else:
-                    statError = averagePulseSubdetDepthAverageStatErrors[det][iWeight]
-                    systError = averagePulseSubdetDepthAverageSystErrors[det][iWeight]
-                    weightStr = "%3.2f"%(averagePulseSubdetDepthAverageWeights[det][iWeight]); weightStr = weightStr.rjust(5)
-                    str2WriteAve += "$%s_{\pm %3.2f}^{\pm %3.2f}$  "%(weightStr,statError,systError)
-                str2Write += "\n"; str2WriteAve += "\n"
+                str2Write += "\n"
 
-            aveSummary.write(str2WriteAve)
             summary.write(str2Write)                   
                     
-        summary.write("\n\n"); aveSummary.write("\n\n")
-
-        summary.close(); aveSummary.close()
+        summary.write("\n\n")
+        summary.close()
 
 if __name__ == '__main__':
 
@@ -804,7 +714,6 @@ if __name__ == '__main__':
     if gFromCache:
         theExtractor.loadHistograms()
         theExtractor.extractFitWeights(save=True)
-        theExtractor.extractAveragePulseWeights()
         theExtractor.getWeightSummary()
 
         theExtractor.drawPulseShapes("PU")
