@@ -423,7 +423,7 @@ class WeightExtractor:
                     if depth != 0: theTitle += ", Depth = %d"%(depth)
                     histo.SetTitle(theTitle)
                     histo.GetYaxis().SetTitle("Linearized ADC")
-                    histo.GetXaxis().SetTitle("TS")
+                    histo.GetXaxis().SetTitle("BX")
                     histo.GetYaxis().SetRangeUser(0,35)
 
                     histo.GetYaxis().SetLabelSize(0.045); histo.GetYaxis().SetTitleSize(0.051); histo.GetYaxis().SetTitleOffset(1.05)
