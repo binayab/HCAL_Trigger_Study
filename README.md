@@ -38,6 +38,16 @@ This will make an output file in `$HOME/nobackup/HCAL_Trigger_Study/plots/Weight
 
 When reading the cache file back in with the `--fromCache` flag, the file must be named `histoCache.root`
 
+### Making an Event Map
+
+To help speed looping over the events tree while extracting weights, one needs to generate an event map that maps an event record in one PU sample to the same event record in the NOPU sample. This is done by running `makeEventMap.py`. A call such as:
+
+```
+python makeEventMap.py --oot
+```
+
+will generate a python file `eventMap_NoContain_NoDepth_OOT.py` with a map `PU2NOPUMAP`. Copy this map into the `pu2nopuMap.py` file.
+
 ### Running on LPC Condor
 
 A condor submission script, `submitWeightExtraction.py` is provided to submit jobs and speed up the extraction of weights when running on an entire input file. An example call to this script would be:
