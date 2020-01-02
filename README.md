@@ -38,7 +38,7 @@ This will make an output file in `$HOME/nobackup/HCAL_Trigger_Study/plots/Weight
 
 When reading the cache file back in with the `--fromCache` flag, the file must be named `histoCache.root`
 
-## Running on LPC Condor
+### Running on LPC Condor
 
 A condor submission script, `submitWeightExtraction.py` is provided to submit jobs and speed up the extraction of weights when running on an entire input file. An example call to this script would be:
 
