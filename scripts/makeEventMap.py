@@ -5,46 +5,72 @@
 import ROOT, argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--depth"   , dest="depth"   , help="Depth?", default=False, action="store_true")
+parser.add_argument("--depth"   , dest="depth"   , help="Use depth sample"      , default=False, action="store_true")
+parser.add_argument("--contain" , dest="contain" , help="With pulse containment", default=False, action="store_true")
+parser.add_argument("--oot"     , dest="oot"     , help="Use OOT sample"        , default=False, action="store_true")
+
 args = parser.parse_args()
+
+# Default to use OOT + IT sample: called 50PU.root
+puStr = "50PU"
+nopuStr = "0PU"
+if args.oot:
+    puStr = "OOT"
+    nopuStr = "NOPU"
+
+containStr = "NoContain"
+if args.contain: containStr = "Contain"
 
 depthStr = "NoDepth"
 if args.depth: depthStr = "Depth"
 
-output = open("outputMap%s.txt"%(depthStr), "w")
+INPUTLOC = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction"
+FULLPATH = "%s/TTbar/%s/%s"%(INPUTLOC,containStr,depthStr)
 
-nopu = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/TTbar/NoContain/%s/NOPU.root"%(depthStr)
-oot  = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction/TTbar/NoContain/%s/OOT.root"%(depthStr)
+output = open("eventMap_%s_%s_%s.py"%(containStr,depthStr,puStr), "w")
 
-f_nopu = ROOT.TFile.Open(nopu, "r"); t_nopu = f_nopu.Get("compareReemulRecoSeverity9/events")
-f_oot  = ROOT.TFile.Open(oot,  "r"); t_oot  = f_oot.Get("compareReemulRecoSeverity9/events")
+nopu = "%s/%s.root"%(FULLPATH,nopuStr)
+pu   = "%s/%s.root"%(FULLPATH,puStr)
 
-t_oot.SetBranchStatus("*", 0);     t_nopu.SetBranchStatus("*", 0)
-t_oot.SetBranchStatus("event", 1); t_nopu.SetBranchStatus("event", 1)
+tree = "compareReemulRecoSeverity9/events"
 
-NEVENTS = t_nopu.GetEntriesFast()
+f_nopu = ROOT.TFile.Open(nopu, "r"); t_nopu = f_nopu.Get(tree)
+f_pu   = ROOT.TFile.Open(pu,  "r");  t_pu   = f_pu.Get(tree)
+
+t_pu.SetBranchStatus("*"    , 0); t_nopu.SetBranchStatus("*"    , 0)
+t_pu.SetBranchStatus("event", 1); t_nopu.SetBranchStatus("event", 1)
+puEntries = t_pu.GetEntriesFast(); nopuEntries = t_nopu.GetEntriesFast()
 
 count = 0
-tempStr = ""
-for iEvent in xrange(0, NEVENTS):
+tempStr = "    "
+output.write("# Event matching for\n")
+output.write("# %s\n"%(nopu))
+output.write("# %s\n\n"%(pu))
+output.write("PU2NOPUMAP = {\n")
 
-    t_oot.GetEntry(iEvent)
-    iRecord = t_oot.event
+for iEvent in xrange(0, puEntries):
 
-    for jEvent in xrange(0, NEVENTS):
+    print "Processing event %d..."%(iEvent)
+    t_pu.GetEntry(iEvent)
+    iRecord = t_pu.event
+
+    for jEvent in xrange(0, nopuEntries):
 
         t_nopu.GetEntry(jEvent)
         jRecord = t_nopu.event
 
         if iRecord == jRecord:
             count += 1
-            tempStr += "%s : %s, "%(iRecord, jEvent)
+            
+            if iEvent == puEntries-1: tempStr += "%s : %s "%(iRecord, jEvent)
+            else: tempStr += "%s : %s, "%(iRecord, jEvent)
 
-            if count == 9: 
+            if iEvent == puEntries-1 or count == 9: 
                 output.write(tempStr + "\n")
-                tempStr = ""
+                tempStr = "    "
                 count = 0
             
             break
 
+output.write("}")
 output.close()
