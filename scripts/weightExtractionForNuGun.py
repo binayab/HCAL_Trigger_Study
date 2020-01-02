@@ -16,7 +16,7 @@ ROOT.TH2.SetDefaultSumw2()
 
 class WeightExtractor:
 
-    def __init__(self, scheme, inputFilePU, inputFileNOPU, outputPath):
+    def __init__(self, scheme, inputFilePU, outputPath):
 
         self.outPath = outputPath              # Base outpath to write everything to
         self.cacheLoc = "%s/root"%(outputPath) # Location to cache histograms in root file
@@ -59,13 +59,12 @@ class WeightExtractor:
         self.statErrors = {}               # Maps depth,ieta,iWeight to a statistical error on the weight 
         self.systErrors = {}               # Maps depth,ieta,iWeight to a systematic error on the weight 
         self.pulseShapesPU = {}            # Average pulse shapes for PU mapped by ieta,depth
-        self.pulseShapesNOPU = {}          # Average pulse shapes for NOPU mapped by ieta,depth
         self.ietaDensity = {}              # Number of matched pulses mapped by ieta,depth
 
         # Initialize map of histos if not loading from cache file
         if not gFromCache:
-            self.tfilepu = ROOT.TFile.Open(inputFilePU, "r"); self.tfilenopu = ROOT.TFile.Open(inputFileNOPU, "r")
-            self.ttreepu = self.tfilepu.Get("compareReemulRecoSeverity9/events"); self.ttreenopu = self.tfilenopu.Get("compareReemulRecoSeverity9/events")
+            self.tfilepu = ROOT.TFile.Open(inputFilePU, "r")
+            self.ttreepu = self.tfilepu.Get("compareReemulRecoSeverity9/events")
             self.nevents = self.ttreepu.GetEntriesFast()
 
             for depth in self.depths:
@@ -85,34 +84,26 @@ class WeightExtractor:
                             self.weightHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(weight, {}).setdefault(ts2Cut, ROOT.TH1F(tname, tname, 720, -50.0, 50.0))
 
                     for ts2Cut in self.ts2Cuts:
-                        tname1 = iname+"_pulsePU_TS2gt%d"%(ts2Cut); tname2 = iname+"_pulseNOPU_TS2gt%d"%(ts2Cut)
+                        tname1 = iname+"_pulsePU_TS2gt%d"%(ts2Cut)
                         self.pulseShapesPU.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, ROOT.TH2F(tname1, tname1, 8, -3.5, 4.5, 2049, -0.5, 2048.5))
-                        self.pulseShapesNOPU.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, ROOT.TH2F(tname2, tname2, 8, -3.5, 4.5, 2049, -0.5, 2048.5))
 
     def eventLoop(self, eventRange): 
 
         if eventRange[0] == -1 or len(eventRange) == 2: return
 
-        self.ttreepu.SetBranchStatus("*", 0);     self.ttreenopu.SetBranchStatus("*", 0)
-        self.ttreepu.SetBranchStatus("ieta", 1);  self.ttreenopu.SetBranchStatus("ieta", 1)
-        self.ttreepu.SetBranchStatus("iphi", 1);  self.ttreenopu.SetBranchStatus("iphi", 1)
-        self.ttreepu.SetBranchStatus("event", 1); self.ttreenopu.SetBranchStatus("event", 1)
-        self.ttreepu.SetBranchStatus("depth", 1); self.ttreenopu.SetBranchStatus("depth", 1)
+        self.ttreepu.SetBranchStatus("*", 0);    
+        self.ttreepu.SetBranchStatus("ieta", 1); 
+        self.ttreepu.SetBranchStatus("iphi", 1); 
+        self.ttreepu.SetBranchStatus("event", 1);
+        self.ttreepu.SetBranchStatus("depth", 1);
 
         for iTS in xrange(0,8):
             self.ttreepu.SetBranchStatus("ts%d"%(iTS), 1)
-            self.ttreenopu.SetBranchStatus("ts%d"%(iTS), 1)
 
         print "Constructing per-ieta, per-event 8TS pulses"
         for iEvent in eventRange:
 
             self.ttreepu.GetEntry(iEvent)
-            self.ttreenopu.GetEntry(PU2NOPUMAP[self.ttreepu.event])
-
-            print self.ttreepu.event
-            if self.ttreepu.event != self.ttreenopu.event:
-                print "EVENT MISMATCH, SKIPPING THIS EVENT ENTRY!"
-                continue
 
             self.event = self.ttreepu.event
 
@@ -132,78 +123,37 @@ class WeightExtractor:
                  + self.ttreepu.ts3[iTP] + self.ttreepu.ts4[iTP] + self.ttreepu.ts5[iTP]\
                  + self.ttreepu.ts6[iTP] + self.ttreepu.ts7[iTP] < 1: continue
 
-                for jTP in xrange(hotStart, len(self.ttreenopu.ieta)):
-                    jeta = self.ttreenopu.ieta[jTP]
-                    jphi = self.ttreenopu.iphi[jTP]
-                    jdepth = self.ttreenopu.depth[jTP]
-            
-                    # Due to ordering once we hit HF ieta stop looping! 
-                    if abs(jeta) > 28: break 
+                print "category   PU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]"%(self.ttreepu.event, ieta, iphi, idepth, self.ttreepu.ts0[iTP], self.ttreepu.ts1[iTP],self.ttreepu.ts2[iTP],self.ttreepu.ts3[iTP],self.ttreepu.ts4[iTP],self.ttreepu.ts5[iTP],self.ttreepu.ts6[iTP],self.ttreepu.ts7[iTP])
 
-                    # Always kill all-0 8TS
-                    elif self.ttreenopu.ts0[jTP] + self.ttreenopu.ts1[jTP] + self.ttreenopu.ts2[jTP]\
-                       + self.ttreenopu.ts3[jTP] + self.ttreenopu.ts4[jTP] + self.ttreenopu.ts5[jTP]\
-                       + self.ttreenopu.ts6[jTP] + self.ttreenopu.ts7[jTP] < 1: continue
+                puPulse    = numpy.zeros((8,1))
+                nopuPulse  = numpy.zeros((8,1))
+                puPulse[0] = self.ttreepu.ts0[iTP]
+                puPulse[1] = self.ttreepu.ts1[iTP]
+                puPulse[2] = self.ttreepu.ts2[iTP]
+                puPulse[3] = self.ttreepu.ts3[iTP]
+                puPulse[4] = self.ttreepu.ts4[iTP]
+                puPulse[5] = self.ttreepu.ts5[iTP]
+                puPulse[6] = self.ttreepu.ts6[iTP]
+                puPulse[7] = self.ttreepu.ts7[iTP]
 
-                    # If we passed in depth then there was no match; break the inner loop and go back to outer loop
-                    elif jdepth > idepth:
-                        hotStart = jTP
-                        break
+                for ts2Cut in self.ts2Cuts:
+                    if self.ttreepu.ts2[iTP] > ts2Cut:
+                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill(-3, self.ttreepu.ts0[iTP])
+                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill(-2, self.ttreepu.ts1[iTP])
+                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill(-1, self.ttreepu.ts2[iTP])
+                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 0, self.ttreepu.ts3[iTP])
+                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 1, self.ttreepu.ts4[iTP])
+                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 2, self.ttreepu.ts5[iTP])
+                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 3, self.ttreepu.ts6[iTP])
+                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 4, self.ttreepu.ts7[iTP])
+                        self.ietaDensity[idepth][ts2Cut].Fill(abs(ieta))
 
-                    # For same depth, if we pass in phi there was and will not be a match 
-                    elif idepth == jdepth:
+                        weights = self.extractWeights(puPulse, nopuPulse)
 
-                        # If we pass in ieta then there is no match; break the inner loop and go back to outer loop
-                        if (jeta - ieta) * jeta > 0:
-                            hotStart = jTP
-                            break
+                        #print weights
 
-                        # If eta also match then check at phi level
-                        elif jeta == ieta:
-
-                            # If we pass in phi then there was no match; break the inner loop and go back to outer loop
-                            if jphi > iphi:
-                                hotStart = jTP
-                                break
-
-                            # Here we match in depth, ieta and phi
-                            elif jphi == iphi:
-
-                                # We are here so we must have found a match!
-                                print "category   PU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]"%(self.ttreepu.event, ieta, iphi, idepth, self.ttreepu.ts0[iTP], self.ttreepu.ts1[iTP],self.ttreepu.ts2[iTP],self.ttreepu.ts3[iTP],self.ttreepu.ts4[iTP],self.ttreepu.ts5[iTP],self.ttreepu.ts6[iTP],self.ttreepu.ts7[iTP])
-                                print "category NOPU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]\n"%(self.ttreenopu.event, jeta, jphi, jdepth, self.ttreenopu.ts0[jTP], self.ttreenopu.ts1[jTP],self.ttreenopu.ts2[jTP],self.ttreenopu.ts3[jTP],self.ttreenopu.ts4[jTP],self.ttreenopu.ts5[jTP],self.ttreenopu.ts6[jTP],self.ttreenopu.ts7[jTP])
-
-                                puPulse    = numpy.zeros((8,1));    nopuPulse    = numpy.zeros((8,1))
-                                puPulse[0] = self.ttreepu.ts0[iTP]; nopuPulse[0] = self.ttreenopu.ts0[jTP]
-                                puPulse[1] = self.ttreepu.ts1[iTP]; nopuPulse[1] = self.ttreenopu.ts1[jTP]
-                                puPulse[2] = self.ttreepu.ts2[iTP]; nopuPulse[2] = self.ttreenopu.ts2[jTP]
-                                puPulse[3] = self.ttreepu.ts3[iTP]; nopuPulse[3] = self.ttreenopu.ts3[jTP]
-                                puPulse[4] = self.ttreepu.ts4[iTP]; nopuPulse[4] = self.ttreenopu.ts4[jTP]
-                                puPulse[5] = self.ttreepu.ts5[iTP]; nopuPulse[5] = self.ttreenopu.ts5[jTP]
-                                puPulse[6] = self.ttreepu.ts6[iTP]; nopuPulse[6] = self.ttreenopu.ts6[jTP]
-                                puPulse[7] = self.ttreepu.ts7[iTP]; nopuPulse[7] = self.ttreenopu.ts7[jTP]
-
-                                for ts2Cut in self.ts2Cuts:
-                                    if self.ttreepu.ts2[iTP] > ts2Cut:
-                                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill(-3, self.ttreepu.ts0[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill(-3, self.ttreenopu.ts0[jTP])
-                                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill(-2, self.ttreepu.ts1[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill(-2, self.ttreenopu.ts1[jTP])
-                                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill(-1, self.ttreepu.ts2[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill(-1, self.ttreenopu.ts2[jTP])
-                                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 0, self.ttreepu.ts3[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill( 0, self.ttreenopu.ts3[jTP])
-                                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 1, self.ttreepu.ts4[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill( 1, self.ttreenopu.ts4[jTP])
-                                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 2, self.ttreepu.ts5[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill( 2, self.ttreenopu.ts5[jTP])
-                                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 3, self.ttreepu.ts6[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill( 3, self.ttreenopu.ts6[jTP])
-                                        self.pulseShapesPU[idepth][abs(ieta)][ts2Cut].Fill( 4, self.ttreepu.ts7[iTP]); self.pulseShapesNOPU[idepth][abs(ieta)][ts2Cut].Fill( 4, self.ttreenopu.ts7[jTP])
-                                        self.ietaDensity[idepth][ts2Cut].Fill(abs(ieta))
-
-                                        weights = self.extractWeights(puPulse, nopuPulse)
-
-                                        print weights
-
-                                        for ts in xrange(0, weights.size): self.weightHistos[idepth][abs(ieta)][ts+1][ts2Cut].Fill(weights[ts])
-                                        self.corrHistos[idepth][abs(ieta)][ts2Cut].Fill(weights[0], weights[1])
-
-                                hotStart = jTP
-                                break
+                        for ts in xrange(0, weights.size): self.weightHistos[idepth][abs(ieta)][ts+1][ts2Cut].Fill(weights[ts])
+                        self.corrHistos[idepth][abs(ieta)][ts2Cut].Fill(weights[0], weights[1])
 
             print "Processed event %d => %d..."%(iEvent,eventRange[-1])
         
@@ -218,7 +168,6 @@ class WeightExtractor:
         for depth in xrange(0,7):
             for ieta in self.HBHEieta:
                 for ts2Cut in self.ts2Cuts:
-                    self.pulseShapesNOPU[depth][ieta][ts2Cut].Write(self.pulseShapesNOPU[depth][ieta][ts2Cut].GetName())
                     self.pulseShapesPU[depth][ieta][ts2Cut].Write(self.pulseShapesPU[depth][ieta][ts2Cut].GetName())
                     self.corrHistos[depth][ieta][ts2Cut].Write(self.corrHistos[depth][ieta][ts2Cut].GetName())
 
@@ -261,10 +210,6 @@ class WeightExtractor:
                     ieta = int(chunks[0].split("ieta")[1]); depth = int(chunks[1].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1])
                     self.pulseShapesPU.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, obj)
 
-                elif "pulseNOPU" in keyName:
-                    ieta = int(chunks[0].split("ieta")[1]); depth = int(chunks[1].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1])
-                    self.pulseShapesNOPU.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, obj)
-
             f.Close()
 
     # Method for extracting weights based on the average pulse shape in each ieta ring, depth
@@ -278,15 +223,10 @@ class WeightExtractor:
                     nopuPulse = numpy.zeros((8,1)); nopuPulseErrors = numpy.zeros((8,1))
 
                     avePUpulse   = self.pulseShapesPU[depth][ieta][ts2Cut].ProfileX("i%d_d%d_TSgt%d_PU_prof"%(ieta,depth,ts2Cut), 1, -1)
-                    aveNOPUpulse = self.pulseShapesNOPU[depth][ieta][ts2Cut].ProfileX("i%d_d%d_TSgt%d_NOPU_prof"%(ieta,depth,ts2Cut), 1, -1)
 
                     for ts in xrange(avePUpulse.GetNbinsX()):
                         puPulse[ts]       = avePUpulse.GetBinContent(ts+1)
                         puPulseErrors[ts] = avePUpulse.GetBinError(ts+1)
-
-                    for ts in xrange(aveNOPUpulse.GetNbinsX()):
-                        nopuPulse[ts]       = aveNOPUpulse.GetBinContent(ts+1)
-                        nopuPulseErrors[ts] = aveNOPUpulse.GetBinError(ts+1)
 
                     weights = self.extractWeights(puPulse, nopuPulse)
                     for ts in xrange(0, weights.size): self.averagePulseWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts+1, {}).setdefault(ts2Cut, weights[ts])
@@ -310,14 +250,14 @@ class WeightExtractor:
     def extractWeights(self, puPulse, nopuPulse):
 
         # Don't try to extract weights with an empty pulse
-        if numpy.count_nonzero(nopuPulse) == 0 or numpy.count_nonzero(puPulse) == 0: 
+        if numpy.count_nonzero(puPulse) == 0: 
 
             weights = numpy.zeros((2,1))
             weights[0] = -999.0; weights[1] = -999.0
 
             return weights
 
-        ifPrint = (1 == 0)
+        ifPrint = (1 == 1)
 
         toPrint = ""
         if ifPrint:
@@ -348,7 +288,7 @@ class WeightExtractor:
                 nopuTSMatrix[ts][tpts] = nopuPulse[idx]
 
         soiMask = numpy.zeros((4,1))
-        if self.tpSamples == 2: soiMask[2:4] = numpy.ones((2,1))
+        if   self.tpSamples == 2: soiMask[2:4] = numpy.ones((2,1))
         elif self.tpSamples == 1: soiMask[2] = 1
 
         puSums = numpy.matmul(puTSMatrix,soiMask)
@@ -375,7 +315,7 @@ class WeightExtractor:
         if ifPrint: toPrint += "weights: " + str(W) + "\n"
 
         #print "W: " + str(W)
-        if ifPrint and int(W[1]) == W[1]: print toPrint
+        if ifPrint: print toPrint
 
         return W
 
@@ -405,7 +345,6 @@ class WeightExtractor:
                 for ts2Cut in self.ts2Cuts:
                 
                     if   category == "PU":   histo = self.pulseShapesPU[depth][ieta][ts2Cut]
-                    elif category == "NOPU": histo = self.pulseShapesNOPU[depth][ieta][ts2Cut]
                     else: continue
 
                     # No need to print out empty plot (for ieta, depth that does not exist...)
@@ -520,7 +459,7 @@ class WeightExtractor:
         histoFit.Draw("SAME")
         someText.Draw("SAME")
     
-        if rebin <= self.rebin and ts2Cut == self.ts2Cut:
+        if rebin <= self.rebin and ts2Cut == self.ts2Cut: 
             outPath = "%s/Fits/ieta%d/depth%d/SOI-%d/TS2gt%d"%(self.outPath,ieta,depth,3-iWeight,ts2Cut)
             if not os.path.exists(outPath): os.makedirs(outPath)
             canvas.SaveAs(outPath + "/WeightDistribution_rebin%d.pdf"%(rebin))
@@ -568,19 +507,19 @@ class WeightExtractor:
                                 theFunc.SetParLimits(3, 0.0, 25.0)
                                 theFunc.SetParLimits(4, 0.0, 25.0)
 
-                            elif ieta > 20:
+                            #elif ieta > 20:
 
-                                name = "f_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString = "[0]*TMath::Gaus(-x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
-                                #theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
-                                theFunc = ROOT.TF1(name, funcString, -5, 1.0)
+                            #    name = "f_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString = "[0]*TMath::Gaus(-x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
+                            #    #theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
+                            #    theFunc = ROOT.TF1(name, funcString, -5, 1.0)
 
-                                theFunc.SetParameters(0.2, 0, 2.5, 2.5, 2.5)
-                                theFunc.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
-                                theFunc.SetParLimits(0, 0.0, 25.0)
-                                theFunc.SetParLimits(1, 0.0, 25.0)
-                                theFunc.SetParLimits(2, 0.0, 5.0)
-                                theFunc.SetParLimits(3, 0.0, 25.0)
-                                theFunc.SetParLimits(3, 0.0, 25.0)
+                            #    theFunc.SetParameters(0.2, 0, 2.5, 2.5, 2.5)
+                            #    theFunc.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
+                            #    theFunc.SetParLimits(0, 0.0, 25.0)
+                            #    theFunc.SetParLimits(1, 0.0, 25.0)
+                            #    theFunc.SetParLimits(2, 0.0, 5.0)
+                            #    theFunc.SetParLimits(3, 0.0, 25.0)
+                            #    theFunc.SetParLimits(3, 0.0, 25.0)
 
                             rHisto.Fit(name, "QMRWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
                             theFunc.SetNpx(1000)
@@ -794,11 +733,10 @@ if __name__ == '__main__':
     eventRange = xrange(arg.evtRange[0], arg.evtRange[0]+arg.evtRange[1]) 
 
     aPath = ""; outPath = "%s/plots/Weights/%s/%s"%(SANDBOX,arg.algo,arg.tag)
-                
-    PUFile   = "%s/TTbar/%s/%s/%s.root"%(INPUTLOC,containStr, depthStr, puStr)
-    noPUFile = "%s/TTbar/%s/%s/NOPU.root"%(INPUTLOC,containStr, depthStr)
+    
+    PUFile   = "%s/NuGun/%s/%s/%s.root"%(INPUTLOC,containStr, depthStr, puStr)
 
-    theExtractor = WeightExtractor(arg.algo, PUFile, noPUFile, outPath)
+    theExtractor = WeightExtractor(arg.algo, PUFile, outPath)
     theExtractor.eventLoop(eventRange)
 
     if gFromCache:
@@ -808,5 +746,4 @@ if __name__ == '__main__':
         theExtractor.getWeightSummary()
 
         theExtractor.drawPulseShapes("PU")
-        theExtractor.drawPulseShapes("NOPU")
         theExtractor.drawWeightCorrs()
