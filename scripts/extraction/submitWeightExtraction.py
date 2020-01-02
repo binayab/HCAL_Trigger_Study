@@ -36,15 +36,15 @@ if arg.contain: exeStub += " --contain"
 if arg.depth:   exeStub += " --depth"
 if arg.oot:     exeStub += " --oot"
 
-taskStub   = arg.scheme + "_TP_" + arg.tag + "_" + date_and_time
-outputDir  = "%s/plots/Weights/%s/TP/%s/root"%(SANDBOX,arg.scheme,arg.tag)
+taskStub   = arg.scheme + "_" + arg.tag + "_" + date_and_time
+outputDir  = "%s/plots/Weights/%s/%s/root"%(SANDBOX,arg.scheme,arg.tag)
 workingDir = "%s/condor/%s"%(SANDBOX,taskStub)
 
 if not os.path.exists(outputDir):  os.makedirs(outputDir)
 if not os.path.exists(workingDir): os.makedirs(workingDir)
 
-exeFile = "%s/scripts/%s"%(SANDBOX,exeName)
-mapFile = "%s/scripts/pu2nopuMap.py"%(SANDBOX)
+exeFile = "%s/scripts/extraction/%s"%(SANDBOX,exeName)
+mapFile = "%s/scripts/extraction/pu2nopuMap.py"%(SANDBOX)
 
 shutil.copy2(exeFile, workingDir)
 shutil.copy2(mapFile, workingDir)
