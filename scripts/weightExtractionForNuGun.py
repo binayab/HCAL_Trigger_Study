@@ -6,7 +6,6 @@ from collections import defaultdict
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
-ROOT.gStyle.SetLineWidth(2)
 ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.gStyle.SetPaintTextFormat("3.2f")
 ROOT.gStyle.SetErrorX(0)
@@ -372,7 +371,7 @@ class WeightExtractor:
                     histo.Draw("COLZ")
 
                     averagePulse.SetLineWidth(5)
-                    averagePulse.SetMarkerSize(3)
+                    averagePulse.SetMarkerSize(4)
                     averagePulse.SetMarkerStyle(20)
                     averagePulse.SetMarkerColor(ROOT.kBlack)
                     averagePulse.SetLineColor(ROOT.kBlack)
@@ -447,12 +446,13 @@ class WeightExtractor:
         histoFit.SetLineWidth(5)
         histoFit.SetLineStyle(7)
 
-        someText = ROOT.TPaveText(0.2, 0.65, 0.6, 0.85, "trNDC")
+        someText = ROOT.TPaveText(0.2, 0.65, 0.55, 0.85, "trNDC")
 
-        someText.AddText("Peak = %3.2f #pm  %3.2f (stat.) #pm  %3.2f (syst.)"%(weight,statError,systError))
+        someText.AddText("Peak = %3.2f_{ #pm %3.2f (stat.)}^{ #pm %3.2f (syst.)}"%(weight,statError,systError))
         someText.AddText("#chi^{2} / DOF = %3.2f / %d"%(histoFit.GetChisquare(), histoFit.GetNDF()))
         someText.AddText("Entries = %d"%(weightHisto.GetEntries()))
         someText.SetTextAlign(31)
+        someText.SetTextSize(0.035)
         someText.SetFillColor(ROOT.kWhite);
 
         weightHisto.Draw("HIST")
