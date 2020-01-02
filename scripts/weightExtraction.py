@@ -38,7 +38,7 @@ class WeightExtractor:
         self.SOI = 3                       # SOI for 8TS digi is always 3
         self.offset = 3                    # We need this offset to scan 8TS digi starting from 0
         self.event = -1                    # Current event we are looking at
-        self.scheme = scheme               # Which algo
+        self.scheme = scheme               # Which pulse filtering scheme 
         self.ts2Cut = 3                    # Requirement on TS2 (SOI-1) > n ADC
         self.rebin = 2                     # Rebin factor for weight histograms
         self.ts2Cuts = list(xrange(0,5))   # List of selections on SOI-1 to make
@@ -765,13 +765,13 @@ class WeightExtractor:
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--tag"       , dest="tag"       , help="Unique tag for output" , type=str     , default="TAG")
-    parser.add_argument("--fromCache" , dest="fromCache" , help="Read from cache file"  , default=False, action="store_true")
-    parser.add_argument("--contain"   , dest="contain"   , help="With pulse containment", default=False, action="store_true")
-    parser.add_argument("--depth"     , dest="depth"     , help="Extract with depth"    , default=False, action="store_true")
-    parser.add_argument("--oot"       , dest="oot"       , help="Use OOT sample"        , default=False, action="store_true")
-    parser.add_argument("--algo"      , dest="algo"      , help="Which reco scheme"     , type=str     , default="ALGO")
-    parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"      , type=int     , nargs="+", default=[-1,1])
+    parser.add_argument("--tag"       , dest="tag"       , help="Unique tag for output"    , type=str     , default="TAG")
+    parser.add_argument("--fromCache" , dest="fromCache" , help="Read from cache file"     , default=False, action="store_true")
+    parser.add_argument("--contain"   , dest="contain"   , help="With pulse containment"   , default=False, action="store_true")
+    parser.add_argument("--depth"     , dest="depth"     , help="Extract with depth"       , default=False, action="store_true")
+    parser.add_argument("--oot"       , dest="oot"       , help="Use OOT sample"           , default=False, action="store_true")
+    parser.add_argument("--scheme"    , dest="scheme"    , help="Which pulse filter scheme", type=str     , default="ALGO")
+    parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"         , type=int     , nargs="+", default=[-1,1])
     
     arg = parser.parse_args()
 
@@ -793,12 +793,12 @@ if __name__ == '__main__':
     gFromCache = arg.fromCache
     eventRange = xrange(arg.evtRange[0], arg.evtRange[0]+arg.evtRange[1]) 
 
-    aPath = ""; outPath = "%s/plots/Weights/%s/%s"%(SANDBOX,arg.algo,arg.tag)
+    aPath = ""; outPath = "%s/plots/Weights/%s/%s"%(SANDBOX,arg.scheme,arg.tag)
                 
     PUFile   = "%s/TTbar/%s/%s/%s.root"%(INPUTLOC,containStr, depthStr, puStr)
     noPUFile = "%s/TTbar/%s/%s/NOPU.root"%(INPUTLOC,containStr, depthStr)
 
-    theExtractor = WeightExtractor(arg.algo, PUFile, noPUFile, outPath)
+    theExtractor = WeightExtractor(arg.scheme, PUFile, noPUFile, outPath)
     theExtractor.eventLoop(eventRange)
 
     if gFromCache:

@@ -7,7 +7,7 @@ date_and_time=time.strftime("%Y%m%d_%H%M%S")
 usage = "usage: %prog [options]"
 parser = argparse.ArgumentParser(usage)
 parser.add_argument("--tag"     , dest="tag"     , help="Unique tag for output"   , type=str     , required=True)
-parser.add_argument("--algo"    , dest="algo"    , help="Which reco scheme"       , type=str     , required=True)
+parser.add_argument("--scheme"  , dest="scheme"  , help="Which reco scheme"       , type=str     , required=True)
 parser.add_argument("--contain" , dest="contain" , help="With pulse containment"  , default=False, action="store_true")
 parser.add_argument("--depth"   , dest="depth"   , help="Extract with depth"      , default=False, action="store_true")
 parser.add_argument("--oot"     , dest="oot"     , help="Use OOT sample"          , default=False, action="store_true")
@@ -30,14 +30,14 @@ if arg.nugun: specialStub = "ForNuGun"
 
 exeName = "weightExtraction%s.py"%(specialStub)
 exeStub = "python %s"%(exeName)
-exeStub += " --algo %s"%(arg.algo)
+exeStub += " --scheme %s"%(arg.scheme)
 
 if arg.contain: exeStub += " --contain"
 if arg.depth:   exeStub += " --depth"
 if arg.oot:     exeStub += " --oot"
 
-taskStub   = arg.algo + "_TP_" + arg.tag + "_" + date_and_time
-outputDir  = "%s/plots/Weights/%s/TP/%s/root"%(SANDBOX,arg.algo,arg.tag)
+taskStub   = arg.scheme + "_TP_" + arg.tag + "_" + date_and_time
+outputDir  = "%s/plots/Weights/%s/TP/%s/root"%(SANDBOX,arg.scheme,arg.tag)
 workingDir = "%s/condor/%s"%(SANDBOX,taskStub)
 
 if not os.path.exists(outputDir):  os.makedirs(outputDir)
