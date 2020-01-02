@@ -88,7 +88,7 @@ if __name__ == '__main__':
     hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(os.getenv("HOME"))
     
     physProcess = "";  inputFiles = []
-    if dataset == "50PU" or dataset == "NOPU" or dataset == "OOT" or dataset == "DATA":
+    if "/" not in dataset:
         physProcess = dataset
         inputFiles.append(dataset)
     else:
