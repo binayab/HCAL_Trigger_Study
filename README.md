@@ -1,14 +1,14 @@
-# HCAL_Trigger_Study
+# HCAL Pulse Filter Study
 
 A repository of scripts for extracting pulse filter weights and applying the weights. To start, setup a CMSSW release (assuming working on LPC) and perform some other initial steps:
 
 ```
-mkdir -p $HOME/nobackup/HCAL_Trigger_Study/{scripts,cmssw,plots}
+mkdir -p $HOME/nobackup/HCAL_Trigger_Study/{cmssw,plots}
 cd $HOME/nobackup/HCAL_Trigger_Study
 
 git clone git@github.com:JHiltbrand/HCAL_Trigger_Study.git
 
-cd ../cmssw
+cd cmssw
 cmsrel CMSSW_10_6_0_pre4
 cd CMSSW_10_6_0_pre4/src
 cmsenv
@@ -31,9 +31,26 @@ Weight extraction is done by the `weightExtraction(ForNuGun).py` script. Several
 An example call of the `weightExtraction.py` script to extract no-depth weights for PFA1p for 100 events starting at event 527 could be:
 
 ```
-python weightExtraction.py --oot --depth --algo PFA1p --tag WithDepth_TTbar_OOT --evtRange 527 100
+python scripts/weightExtraction.py --oot --depth --algo PFA1p --tag WithDepth_TTbar_OOT --evtRange 527 100
 ```
 
-This will make an output file in `../plots/Weights/PFA1p/TP/WithDepth_TTbar_OOT/root/histoCache_527.root`
+This will make an output file in `$HOME/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/TP/WithDepth_TTbar_OOT/root/histoCache_527.root`
 
 When reading the cache file back in with the `--fromCache` flag, the file must be named `histoCache.root`
+
+## Running on LPC Condor
+
+A condor submission script, `submitWeightExtraction.py` is provided to submit jobs and speed up the extraction of weights when running on an entire input file. An example call to this script would be:
+
+```
+python scripts/submitWeightExtraction.py --oot --depth --algo PFA1p --tag WithDepth_TTbar_OOT --nJobs 90
+```
+
+The output files will be placed in the same location mentioned when running locally and one needs to hadd these files.
+
+```
+cd $HOME/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/TP/WithDepth_TTbar_OOT/root
+hadd histoCache.root histoCache_*
+```
+
+
