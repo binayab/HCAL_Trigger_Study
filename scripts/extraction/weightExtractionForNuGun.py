@@ -34,14 +34,14 @@ class WeightExtractor:
             self.tpPresamples = 2          # PFA1p uses SOI fully and SOI-2 and SOI-1 presamples to subtract
             self.tpSamples = 1             # Only SOI is used to sample non-PU pulse
 
-        self.SOI = 3                       # SOI for 8TS digi is always 3
-        self.offset = 3                    # We need this offset to scan 8TS digi starting from 0
-        self.event = -1                    # Current event we are looking at
-        self.scheme = scheme               # Which pulse filter scheme 
-        self.ts2Cut = 3                    # Requirement on TS2 (SOI-1) > n ADC
-        self.rebin = 2                     # Rebin factor for weight histograms
-        self.ts2Cuts = list(xrange(0,5))   # List of selections on SOI-1 to make
-        self.depths = list(xrange(0,7))    # List of all possible depths (not all for any given ieta!)
+        self.SOI      = 3                  # SOI for 8TS digi is always 3
+        self.offset   = 3                  # We need this offset to scan 8TS digi starting from 0
+        self.event    = -1                 # Current event we are looking at
+        self.scheme   = scheme             # Which pulse filter scheme 
+        self.ts2Cut   = 3                  # Requirement on TS2 (SOI-1) > n ADC
+        self.rebin    = 2                  # Rebin factor for weight histograms
+        self.ts2Cuts  = list(xrange(0,5))  # List of selections on SOI-1 to make
+        self.depths   = list(xrange(0,7))  # List of all possible depths (not all for any given ieta!)
         self.iWeights = list(xrange(1,3))  # List of i weights 
 
         self.HBHEieta = list(xrange(1,29))
@@ -394,7 +394,7 @@ class WeightExtractor:
         histoFit.SetLineWidth(5)
         histoFit.SetLineStyle(7)
 
-        someText = ROOT.TPaveText(0.2, 0.65, 0.55, 0.85, "trNDC")
+        someText = ROOT.TPaveText(0.19, 0.65, 0.54, 0.85, "trNDC")
 
         someText.AddText("Peak = %3.2f_{ #pm %3.2f (stat.)}^{ #pm %3.2f (syst.)}"%(weight,statError,systError))
         someText.AddText("#chi^{2} / DOF = %3.2f / %d"%(histoFit.GetChisquare(), histoFit.GetNDF()))
@@ -407,7 +407,7 @@ class WeightExtractor:
         histoFit.Draw("SAME")
         someText.Draw("SAME")
     
-        if rebin <= self.rebin and ts2Cut == self.ts2Cut: 
+        if rebin <= 4 and ts2Cut == self.ts2Cut: 
             outPath = "%s/Fits/ieta%d/depth%d/SOI-%d/TS2gt%d"%(self.outPath,ieta,depth,3-iWeight,ts2Cut)
             if not os.path.exists(outPath): os.makedirs(outPath)
             canvas.SaveAs(outPath + "/WeightDistribution_rebin%d.pdf"%(rebin))
@@ -419,6 +419,8 @@ class WeightExtractor:
             for depth in self.depths:
                 for ieta in self.HBHEieta:
                     for ts2Cut in self.ts2Cuts:
+
+                        if ts2Cut != self.ts2Cut: continue
 
                         histo = self.weightHistos[depth][ieta][iWeight][ts2Cut]
                         if histo.Integral() == 0:
@@ -439,47 +441,48 @@ class WeightExtractor:
 
                         for rebin, rHisto in rebinHistos.iteritems():
 
-                            binmax = rHisto.GetMaximumBin(); xmax = rHisto.GetBinCenter(binmax); binWidth = rHisto.GetBinWidth(1)
+                            masterFunc = 0
+                            name1 = "f1_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString1 = "[0]*TMath::CauchyDist(x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc1 = 0
 
-                            if ieta <= 28 or self.tpSamples == 1:
+                            theFunc1 = ROOT.TF1(name1, funcString1, -5, 1.0)
 
-                                name = "f_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString = "[0]*TMath::Landau(-x, [1], [2])*TMath::CauchyDist(-x, [3], [4])"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
-                                #theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
-                                theFunc = ROOT.TF1(name, funcString, -5, 1.0)
+                            theFunc1.SetParameters(0.2, -0.3, 2.5, 0.3, 2.5)
+                            theFunc1.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
+                            theFunc1.SetParLimits(0, 0.0, 5.0)
+                            theFunc1.SetParLimits(1, -5.0, 0.0)
+                            theFunc1.SetParLimits(2, 0.0, 5.0)
+                            theFunc1.SetParLimits(3, 0.0, 5.0)
+                            theFunc1.SetParLimits(3, 0.0, 25.0)
 
-                                theFunc.SetParameters(0.2, 0, 2.5, 0, 2.5)
-                                theFunc.SetParNames("A", "position", "scale", "mu", "sigma")
-                                theFunc.SetParLimits(0, 0.0, 25.0)
-                                theFunc.SetParLimits(1, 0.0, 25.0)
-                                theFunc.SetParLimits(2, 0.0, 25.0)
-                                theFunc.SetParLimits(3, 0.0, 25.0)
-                                theFunc.SetParLimits(4, 0.0, 25.0)
+                            name2 = "f2_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString2 = "[0]*TMath::Gaus(x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc2 = 0
 
-                            #elif ieta > 20:
+                            theFunc2 = ROOT.TF1(name2, funcString2, -5, 1.0)
 
-                            #    name = "f_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString = "[0]*TMath::Gaus(-x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc = 0; fitWidth = 2.0*binWidth; fitRange = [xmax-fitWidth,xmax+fitWidth]
-                            #    #theFunc = ROOT.TF1(name, funcString, fitRange[0], fitRange[1])
-                            #    theFunc = ROOT.TF1(name, funcString, -5, 1.0)
+                            theFunc2.SetParameters(0.2, -0.3, 2.5, 0.3, 2.5)
+                            theFunc2.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
+                            theFunc2.SetParLimits(0, 0.0, 5.0)
+                            theFunc2.SetParLimits(1, -5.0, 0.0)
+                            theFunc2.SetParLimits(2, 0.0, 5.0)
+                            theFunc2.SetParLimits(3, 0.0, 5.0)
+                            theFunc2.SetParLimits(3, 0.0, 25.0)
 
-                            #    theFunc.SetParameters(0.2, 0, 2.5, 2.5, 2.5)
-                            #    theFunc.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
-                            #    theFunc.SetParLimits(0, 0.0, 25.0)
-                            #    theFunc.SetParLimits(1, 0.0, 25.0)
-                            #    theFunc.SetParLimits(2, 0.0, 5.0)
-                            #    theFunc.SetParLimits(3, 0.0, 25.0)
-                            #    theFunc.SetParLimits(3, 0.0, 25.0)
+                            rHisto.Fit(name1, "QMRE") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                            rHisto.Fit(name2, "QMRE") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
 
-                            rHisto.Fit(name, "QMRWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
-                            theFunc.SetNpx(1000)
+                            chi1ndf = theFunc1.GetChisquare() / theFunc1.GetNDF()
+                            chi2ndf = theFunc2.GetChisquare() / theFunc2.GetNDF()
 
-                            rebinWeights[rebin] = theFunc.GetMaximumX(-5.0,5.0)
-                            meanError = theFunc.GetParameter("sigma")
+                            if   chi1ndf > 0 and chi1ndf < chi2ndf: masterFunc = theFunc1
+                            elif chi2ndf > 0 and chi2ndf < chi1ndf: masterFunc = theFunc2
 
-                            rebinFits[rebin] = theFunc
+                            masterFunc.SetNpx(1000);
+
+                            rebinWeights[rebin] = masterFunc.GetMaximumX(-5.0,5.0)
+                            meanError = masterFunc.GetParameter("sigma")
+
+                            rebinFits[rebin] = masterFunc
                             rebinStatErrors[rebin] = meanError / math.sqrt(numEntries) 
 
-                            if rebin != self.rebin: self.drawWeightHisto(ieta, depth, iWeight, rebin, ts2Cut, rebinWeights[rebin], rebinStatErrors[rebin], -1.0, rebinHistos[rebin], rebinFits[rebin])
-                            
                         theWeight = rebinWeights[self.rebin]; theStatError = rebinStatErrors[self.rebin]
 
                         # From the five different fits the histogram determine the standard dev of the weights 
@@ -488,7 +491,9 @@ class WeightExtractor:
                         self.statErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theStatError)
                         self.systErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theSystError)
 
-                        if save: self.drawWeightHisto(ieta, depth, iWeight, self.rebin, ts2Cut, theWeight, theStatError, theSystError, rebinHistos[self.rebin], rebinFits[self.rebin])
+                        if save:
+                            for rebin in xrange(1,5):
+                                self.drawWeightHisto(ieta, depth, iWeight, rebin, ts2Cut, rebinWeights[rebin], rebinStatErrors[rebin], theSystError, rebinHistos[rebin], rebinFits[rebin])
 
     # Method for calculating the averaged-over-depth weight for each ieta and average-over-depth for HB, HE1, HE2
     def getDepthAverageWeightsAndErrors(self, weightDict, statErrorDict, systErrorDict):
