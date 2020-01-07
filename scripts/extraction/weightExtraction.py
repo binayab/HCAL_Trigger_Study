@@ -522,18 +522,23 @@ class WeightExtractor:
                             theFunc2.SetParLimits(3, 0.0, 5.0)
                             theFunc2.SetParLimits(3, 0.0, 25.0)
 
-                            rHisto.Fit(name1, "QMRE") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
-                            rHisto.Fit(name2, "QMRE") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                            rHisto.Fit(name1, "QMREWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                            rHisto.Fit(name2, "QMREWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                            
+                            chi1ndf = 0; chi2ndf = 0 
+                            try: chi1ndf = theFunc1.GetChisquare() / theFunc1.GetNDF()
+                            except: chi1ndf = 999999
+                            try: chi2ndf = theFunc2.GetChisquare() / theFunc2.GetNDF()
+                            except: chi2ndf = 999998
 
-                            chi1ndf = theFunc1.GetChisquare() / theFunc1.GetNDF()
-                            chi2ndf = theFunc2.GetChisquare() / theFunc2.GetNDF()
-
-                            if chi1ndf > 0 and chi1ndf < chi2ndf:   masterFunc = theFunc1
+                            if   chi1ndf > 0 and chi1ndf < chi2ndf: masterFunc = theFunc1
                             elif chi2ndf > 0 and chi2ndf < chi1ndf: masterFunc = theFunc2
+                            else: masterFunc = theFunc1
 
                             masterFunc.SetNpx(1000);
 
-                            rebinWeights[rebin] = masterFunc.GetMaximumX(-5.0,5.0)
+                            #rebinWeights[rebin] = masterFunc.GetMaximumX(-5.0,5.0)
+                            rebinWeights[rebin] = rHisto.GetMean() 
                             meanError = masterFunc.GetParameter("sigma")
 
                             rebinFits[rebin] = masterFunc
@@ -684,52 +689,84 @@ class WeightExtractor:
 
         depthAverageWeights, subdetDepthAverageWeights, depthAverageStatErrors, \
         depthAverageSystErrors, subdetDepthAverageStatErrors, subdetDepthAverageSystErrors = self.getDepthAverageWeightsAndErrors(self.fitWeights, self.statErrors, self.systErrors)
-
-        emptyStr = "              -               & "
-        for iWeight in self.iWeights:
-            str2Write = "\nwSOI-%d:\n"%(3-iWeight)
-
+        
+        depthStr = ""
+        if "WithDepth" in self.outPath: depthStr = "_DEPTH_AVE"
+        firstTag = True
+        str2Write = ""
+        for tag in ["", "_UP", "_DOWN"]:
+            if not firstTag: str2Write += ",\n\n"
+            str2Write += "\"%s%s_PER_IETA%s\" : cms.untracked.PSet(**dict([\n"%(self.scheme,depthStr,tag)
+            firstIeta = True
             for ieta in self.HBHEieta:
+                ietaStr = "    (\"%d\","%(ieta)
+                ietaStr = ietaStr.ljust(11)
+                
+                if not firstIeta: str2Write += ",\n"
+                str2Write += "%s cms.untracked.vdouble("%(ietaStr)
+                firstWeight = True
+                for iWeight in self.iWeights:
+                    if not firstWeight: str2Write += ", " 
+
+                    if depthAverageWeights[ieta][iWeight] == -999:
+                        continue
+                    else:
+                        statError = depthAverageStatErrors[ieta][iWeight]
+                        systError = depthAverageSystErrors[ieta][iWeight]
+                        weightStr = "%3.2f"%(depthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
+
+                        if   "UP"   in tag: str2Write += "%s + (%3.2f**2 + %3.2f**2)**0.5"%(weightStr,statError,systError)
+                        elif "DOWN" in tag: str2Write += "%s - (%3.2f**2 + %3.2f**2)**0.5"%(weightStr,statError,systError)
+                        else:               str2Write += "%s"%(weightStr)
+
+                    firstWeight = False
+                
+                firstIeta = False
+                str2Write += "))"
+
+            str2Write += "\n]))"
+            firstTag = False
+
+        str2Write += "\n"
+        firstTag = True
+        for tag in ["", "_UP", "_DOWN"]:
+            if not firstTag: str2Write += ",\n\n"
+            str2Write += "\"%s%s_AVE%s\" : cms.untracked.PSet(**dict([\n"%(self.scheme,depthStr,tag)
+            firstIeta = True
+            for ieta in self.HBHEieta:
+                det = "" 
+                if   ieta <= 16: det = "HB" 
+                elif ieta <= 20: det = "HE1"
+                elif ieta <= 28: det = "HE2"
+
                 ietaStr = "%d"%(ieta)
                 ietaStr = ietaStr.rjust(2)
 
-                str2Write += "\"%s\"   "%(ietaStr)
-                
-                if depthAverageWeights[ieta][iWeight] == -999:
-                    str2Write += emptyStr
-                else:
-                    statError = depthAverageStatErrors[ieta][iWeight]
-                    systError = depthAverageSystErrors[ieta][iWeight]
-                    weightStr = "%3.2f"%(depthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
-                    str2Write += "cms.untracked.vdouble(%s + (%3.2f**2 + %3.2f**2)**0.5) & "%(weightStr,statError,systError)
+                if not firstIeta: str2Write += ",\n"
+                str2Write += "    (\"%s\", cms.untracked.vdouble("%(ietaStr)
+                firstWeight = True
+                for iWeight in self.iWeights:
+                    if not firstWeight: str2Write += ", "
+                    if subdetDepthAverageWeights[det][iWeight] == -999: continue 
+                    else:
+                        statError = subdetDepthAverageStatErrors[det][iWeight]
+                        systError = subdetDepthAverageSystErrors[det][iWeight]
 
-                for depth in self.depths:
-                    if self.fitWeights[depth][ieta][iWeight][self.ts2Cut] == -999: 
-                        str2Write += emptyStr 
-                    else: 
-                        weightStr = "%3.2f"%(self.fitWeights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
-                        statError = self.statErrors[depth][ieta][iWeight][self.ts2Cut]
-                        systError = self.systErrors[depth][ieta][iWeight][self.ts2Cut]
-                        str2Write += "cms.untracked.vdouble(%s + (%3.2f**2 + %3.2f**2)**0.5) & "%(weightStr,statError,systError)
-                str2Write += "\n"
+                        weightStr = "%3.2f"%(subdetDepthAverageWeights[det][iWeight]); weightStr = weightStr.rjust(5)
 
-            str2Write += "\n"
-            for det, weightDict in subdetDepthAverageWeights.iteritems():
-                detStr = "%s"%(det)
-                detStr = detStr.rjust(8)
-                detStr += "   "
-                str2Write += detStr           
-                if weightDict[iWeight] == -999:
-                    str2Write += emptyStr
-                else:
-                    statError = subdetDepthAverageStatErrors[det][iWeight]
-                    systError = subdetDepthAverageSystErrors[det][iWeight]
-                    weightStr = "%3.2f"%(weightDict[iWeight]); weightStr = weightStr.rjust(5)
-                    str2Write += "%s + (%3.2f**2 + %3.2f**2)**0.5  "%(weightStr,statError,systError)
+                        if   "UP"   in tag: str2Write += "%s + (%3.2f**2 + %3.2f**2)**0.5"%(weightStr,statError,systError)
+                        elif "DOWN" in tag: str2Write += "%s - (%3.2f**2 + %3.2f**2)**0.5"%(weightStr,statError,systError)
+                        else:               str2Write += "%s"%(weightStr)
 
-                str2Write += "\n"
+                    firstWeight = False
 
-            summary.write(str2Write)                   
+                firstIeta = False
+                str2Write += "))"
+
+            str2Write += "\n]))"
+            firstTag = False
+
+        summary.write(str2Write)                   
                     
         summary.write("\n\n")
         summary.close()
