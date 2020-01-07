@@ -74,12 +74,12 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
-    parser.add_argument("--pfa"     , dest="pfa"     , help="Which PFA to use"        , type=str , required=True)
+    parser.add_argument("--scheme"  , dest="scheme"  , help="Which PFA to use"        , type=str , required=True)
     parser.add_argument("--dataset" , dest="dataset" , help="Unique path to dataset"  , type=str , default="50PU")
     parser.add_argument("--tag"     , dest="tag"     , help="Unique tag"              , type=str , default="NULL")
     args = parser.parse_args()
 
-    algo     = args.pfa
+    scheme   = args.scheme
     tag      = args.tag
     dataset  = args.dataset
     noSubmit = args.noSubmit
@@ -95,8 +95,8 @@ if __name__ == '__main__':
         inputFiles = files4Dataset(dataset)
         physProcess = dataset.split("/")[1].split("_")[0]
     
-    outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s/%s/%s"%(physProcess, tag, algo)
-    workingDir = "%s/condor/%s_%s_%s_%s"%(hcalDir, physProcess, algo, tag, taskDir)
+    outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s/%s/%s"%(physProcess, tag, scheme)
+    workingDir = "%s/condor/%s_%s_%s_%s"%(hcalDir, physProcess, scheme, tag, taskDir)
     
     # After defining the directory to work the job in and output to, make them
     subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
@@ -116,7 +116,7 @@ if __name__ == '__main__':
     CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
 
     # Make the .sh to run the show
-    generate_job_steerer(workingDir, algo, outputDir, CMSSW_VERSION)
+    generate_job_steerer(workingDir, scheme, outputDir, CMSSW_VERSION)
 
     # Make the jdl to hold condor's hand
     generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION)
@@ -130,7 +130,7 @@ if __name__ == '__main__':
 
     # Let's be smart and determine if sed has to do a replacement which requires a recompile.
     recompile = False; replaceStr = ""
-    if "1" not in algo:
+    if "1" not in scheme:
         p = subprocess.Popen(["grep", oneTS, filePath], stdout=subprocess.PIPE)
         recompile = bool(p.stdout.readline())
         replaceStr = 's#%s#%s#g'%(oneTS,twoTS)
