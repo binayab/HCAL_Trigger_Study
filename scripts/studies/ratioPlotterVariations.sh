@@ -2,16 +2,13 @@
 
 CODE=$1
 SELECT=$2
-
-NTUPLES="/eos/uscms/store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples"
 PROCESS=$3
 
-INPUTDIR="${NTUPLES}/${PROCESS}"
+INPUTDIR="${PROCESS}"
 
 SWITCH="$((2#${CODE}))"
 
 SCRIPTDIR="${HOME}/nobackup/HCAL_Trigger_Study/scripts/studies"
-OUTBASE="${HOME}/nobackup/HCAL_Trigger_Study/input/Ratios"
 
 COMMAND=""
 
@@ -19,17 +16,17 @@ if (( ${SWITCH}&(2**12) ))
 then
     if (( ${SELECT} == 0 ))
     then
-        COMMAND="(nohup python ${SCRIPTDIR}/ratioStudyPlotter.py ${INPUTDIR}/PFA2 ${OUTBASE}/PFA2/${PROCESS} > /dev/null 2>&1 &)"
+        COMMAND="(nohup python ${SCRIPTDIR}/ratioStudyPlotter.py ${INPUTDIR}/PFA2 PFA2/${PROCESS} > /dev/null 2>&1 &)"
     fi
     if (( ${SELECT} == 1 ))
     then
-        COMMAND="(nohup python ${SCRIPTDIR}/ratioStudyPlotter.py ${INPUTDIR}/PFA1 ${OUTBASE}/PFA1/${PROCESS} > /dev/null 2>&1 &)"
+        COMMAND="(nohup python ${SCRIPTDIR}/ratioStudyPlotter.py ${INPUTDIR}/PFA1 PFA1/${PROCESS} > /dev/null 2>&1 &)"
     fi
 fi
 
 if (( ${SELECT} == 0 ))
 then
-    ALGOSTUB="${OUTBASE}/PFA2p/${PROCESS}"
+    ALGOSTUB="PFA2p/${PROCESS}"
 
     # All PFA2p variations
     if (( ${SWITCH}&(2**0) ))
@@ -85,7 +82,7 @@ then
     fi
 else
 
-    ALGOSTUB="${OUTBASE}/PFA1p/${PROCESS}"
+    ALGOSTUB="PFA1p/${PROCESS}"
 
     # All PFA1p variations
     if (( ${SWITCH}&(2**0) ))
