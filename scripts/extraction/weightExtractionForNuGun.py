@@ -64,7 +64,6 @@ class WeightExtractor:
         if not gFromCache:
             self.tfilepu = ROOT.TFile.Open(inputFilePU, "r")
             self.ttreepu = self.tfilepu.Get("compareReemulRecoSeverity9/events")
-            self.nevents = self.ttreepu.GetEntriesFast()
 
             for depth in self.depths:
                 for ts2Cut in self.ts2Cuts:
@@ -148,8 +147,6 @@ class WeightExtractor:
                         self.ietaDensity[idepth][ts2Cut].Fill(abs(ieta))
 
                         weights = self.extractWeights(puPulse, nopuPulse)
-
-                        #print weights
 
                         for ts in xrange(0, weights.size): self.weightHistos[idepth][abs(ieta)][ts+1][ts2Cut].Fill(weights[ts])
                         self.corrHistos[idepth][abs(ieta)][ts2Cut].Fill(weights[0], weights[1])
@@ -466,18 +463,23 @@ class WeightExtractor:
                             theFunc2.SetParLimits(3, 0.0, 5.0)
                             theFunc2.SetParLimits(3, 0.0, 25.0)
 
-                            rHisto.Fit(name1, "QMRE") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
-                            rHisto.Fit(name2, "QMRE") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                            rHisto.Fit(name1, "QMREWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                            rHisto.Fit(name2, "QMREWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
 
-                            chi1ndf = theFunc1.GetChisquare() / theFunc1.GetNDF()
-                            chi2ndf = theFunc2.GetChisquare() / theFunc2.GetNDF()
+                            chi1ndf = 0; chi2ndf = 0 
+                            try: chi1ndf = theFunc1.GetChisquare() / theFunc1.GetNDF()
+                            except: chi1ndf = 999999
+                            try: chi2ndf = theFunc2.GetChisquare() / theFunc2.GetNDF()
+                            except: chi2ndf = 999998
 
                             if   chi1ndf > 0 and chi1ndf < chi2ndf: masterFunc = theFunc1
                             elif chi2ndf > 0 and chi2ndf < chi1ndf: masterFunc = theFunc2
+                            else: masterFunc = theFunc1
 
                             masterFunc.SetNpx(1000);
 
-                            rebinWeights[rebin] = masterFunc.GetMaximumX(-5.0,5.0)
+                            #rebinWeights[rebin] = masterFunc.GetMaximumX(-5.0,5.0)
+                            rebinWeights[rebin] = rHisto.GetMean() 
                             meanError = masterFunc.GetParameter("sigma")
 
                             rebinFits[rebin] = masterFunc
