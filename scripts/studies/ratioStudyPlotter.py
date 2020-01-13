@@ -1,3 +1,7 @@
+# First script directly running on HCAL ntuples files
+# An example call could be:
+# python studies/ratioStudyPlotter.py subpath/to/scheme/ntuples subpath/to/raw/histograms
+
 import sys, os, ROOT, subprocess
 
 ROOT.gROOT.SetBatch(True)
@@ -10,15 +14,19 @@ ROOT.TH1.SetDefaultSumw2()
 # Regardless if RH or TP ET on z, always impose TP ET > 0.5
 def ratioTPVsRH_Eta_ET(evtsTree, basis = "TP", bx = "(1==1)"):
 
-    etBins = 0; etBranch = ""; tpMinSelection = "TP_energy>0.5"
+    etBins = 0; xmin = 0; xmax = 0; etBranch = ""; tpMinSelection = "TP_energy>0.5"
     if basis == "TP":
         etBranch = "TP_energy"
         etBins = 257 
+        zmin = -0.25
+        zmax = 128.25
     else:
         etBranch = "RH_energy"
         etBins = 257 
+        zmin = -0.25
+        zmax = 128.25
 
-    h3 = ROOT.TH3F("h3_%sET"%(basis), "h3_%sET"%(basis), 57, -28.5, 28.5, 720, 0., 20.0, etBins, -0.25, 128.25)
+    h3 = ROOT.TH3F("h3_%sET"%(basis), "h3_%sET"%(basis), 57, -28.5, 28.5, 720, 0., 20.0, etBins, zmin, zmax)
 
     evtsTree.Draw("%s:TP_energy/RH_energy:ieta>>h3_%sET"%(etBranch,basis), "tp_soi!=255 && %s && RH_energy>0. && %s"%(tpMinSelection,bx))
 
@@ -161,11 +169,18 @@ def analysis(PFAXFileDir, outDir):
         ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.5,10],[ieta])
         ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[10, 1000],[ieta])
 
+    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.0,10],[1,28])
+    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.5,10],[1,28])
+    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[10, 1000],[1,28])
+
     ratioTPVsRH_Eta(outFile,TPETvRatiovEta_TP,"TP",[0.5,10])
     ratioTPVsRH_Eta(outFile,TPETvRatiovEta_TP,"TP",[10, 1000])
+    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_TP,"TP",[0.0,1000])
 
+    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[0.0,10])
     ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[0.5,10])
     ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[10, 1000])
+    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[0.0, 1000])
 
     ratioTPVsRH_ET(outFile,TPETvRatiovEta_TP,"TP")
     ratioTPVsRH_ET(outFile,TPETvRatiovEta_RH,"RH")
@@ -174,7 +189,11 @@ def analysis(PFAXFileDir, outDir):
    
 if __name__ == '__main__':
 
-    PFAXFileDir = str(sys.argv[1])
-    outDir      = str(sys.argv[2])
+    HOME = os.getenv("HOME")
+    INPUTLOC = "/eos/uscms/store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples"
+    OUTPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Ratios" 
 
-    analysis(PFAXFileDir, outDir)
+    PFAXFileStub = str(sys.argv[1])
+    outputStub   = str(sys.argv[2])
+
+    analysis(INPUTLOC + "/" + PFAXFileStub, OUTPUTLOC + "/" + outputStub)
