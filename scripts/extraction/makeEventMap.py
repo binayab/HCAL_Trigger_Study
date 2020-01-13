@@ -1,36 +1,25 @@
 #!/usr/bin/env python
 
-# Takes a PU file and a NOPU file and finds what entry number in the NOPU file corresponds to the event record number in the PU file
+# Takes a PU ntuple file and a NOPU ntuple file and finds what entry number
+# in the NOPU file corresponds to the event record number in the PU file
+
+# An example call to this script would be
+# python extraction/makeEventMap.py --pu subpath/to/ootpu/hcalNtuple_0.root --nopu subpath/to/nopu/hcalNtuple_0.root
 
 import ROOT, argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--depth"   , dest="depth"   , help="Use depth sample"      , default=False, action="store_true")
-parser.add_argument("--contain" , dest="contain" , help="With pulse containment", default=False, action="store_true")
-parser.add_argument("--oot"     , dest="oot"     , help="Use OOT sample"        , default=False, action="store_true")
+parser.add_argument("--pu"  , dest="pu"  , help="Subfolder for PU file"  , required=True)
+parser.add_argument("--nopu", dest="nopu", help="Subfolder for NOPU file", required=True)
 
 args = parser.parse_args()
 
-# Default to use OOT + IT sample: called 50PU.root
-puStr = "50PU"
-nopuStr = "0PU"
-if args.oot:
-    puStr = "OOT"
-    nopuStr = "NOPU"
+INPUTLOC = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study"
 
-containStr = "NoContain"
-if args.contain: containStr = "Contain"
+output = open("eventMap.py", "w")
 
-depthStr = "NoDepth"
-if args.depth: depthStr = "Depth"
-
-INPUTLOC = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction"
-FULLPATH = "%s/TTbar/%s/%s"%(INPUTLOC,containStr,depthStr)
-
-output = open("eventMap_%s_%s_%s.py"%(containStr,depthStr,puStr), "w")
-
-nopu = "%s/%s.root"%(FULLPATH,nopuStr)
-pu   = "%s/%s.root"%(FULLPATH,puStr)
+nopu = "%s/%s"%(INPUTLOC,args.nopu)
+pu   = "%s/%s"%(INPUTLOC,args.pu)
 
 tree = "compareReemulRecoSeverity9/events"
 
