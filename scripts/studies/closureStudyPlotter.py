@@ -1,3 +1,9 @@
+# This script runs on two HCAL ntuple files, assumed to be from the same GEN-SIM file(s) 
+# and matches TPs between the files (same event, same iphi, same ieta) to the get the TP ET
+# ratio. An example call to the script would be:
+# python studies/closureStudyPlotter.py subpath/to/nopu/ntuples/ subpath/to/ootpu/ntuples 0.5
+# The last argument is the minimum TP ET to accept for both TPs in a match when computing the ratio
+
 import sys, os, ROOT, subprocess
 from pu2nopuMap import PU2NOPUMAP 
 
@@ -7,11 +13,9 @@ ROOT.gStyle.SetLineWidth(4)
 ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.TH1.SetDefaultSumw2()
 
-HCALNTUPLES = "/eos/uscms/store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/"
-
-# From the events do a draw to make a 3D histo with RH or TP ET on z, TP/RH ratio on y and ieta on x
-# Regardless if RH or TP ET on z, always impose TP ET > 0.5
-def tpRatio(minTPET, nopuChain, ootChain, outfile):
+# The main looping function that takes in a TChain for nopu and oot pu files, finds the
+# matched TPs and fills a raw 2D histogram with the ratio.
+def eventLoop(minTPET, nopuChain, ootChain, outfile):
 
     outfile.cd()
     h2 = ROOT.TH2F("tpET_ratio", ";i#eta;TP E_{T} Ratio", 57, -28.5, 28.5, 720, -0.014, 19.986)
@@ -97,7 +101,11 @@ def tpRatio(minTPET, nopuChain, ootChain, outfile):
     h2.Write()
     outfile.Close()
 
+# The analysis method does the handling of the input file path and gets the list of files.
+# From there the TChains are created and passed to the eventLoop
 def analysis(NOPUFileDir, OOTFileDir, minTPET):
+
+    HCALNTUPLES = "/eos/uscms/store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/"
 
     onEOS = "store" in NOPUFileDir
 
@@ -144,7 +152,7 @@ def analysis(NOPUFileDir, OOTFileDir, minTPET):
     
         cOOT.AddFile("root://cmseos.fnal.gov/"+item)
 
-    tpRatio(minTPET, cNOPU, cOOT, outFile)    
+    eventLoop(minTPET, cNOPU, cOOT, outFile)    
 
     print "Done writing to ==> \"%s\""%(outFilePath)
     outFile.Close()

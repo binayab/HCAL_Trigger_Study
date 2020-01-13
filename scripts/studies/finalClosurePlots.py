@@ -1,3 +1,7 @@
+# The finalClosurePlots script extracts the raw 2D histograms made by the closureStudyPlotter script
+# and puts them into final presentable form. An example call would be:
+# python studies/finalClosurePlots.py --tag someTag --pfaY subpath/to/nominal --pfaX1 subpath/to/new
+
 import sys, os, ROOT, argparse
 
 ROOT.TH1.SetDefaultSumw2()
@@ -102,11 +106,12 @@ if __name__ == '__main__':
 
     HOME = os.getenv("HOME")
     OUTBASE = "%s/nobackup/HCAL_Trigger_Study/plots/Closure"%(HOME)
+    INPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Closure"%(HOME)
 
     # Save the input directories provided and fill the map of histos
-    fillMap("PFAY" , args.pfaY)
-    fillMap("PFAX1", args.pfaX1)
-    fillMap("PFAX2", args.pfaX2)
+    fillMap("PFAY" , INPUTLOC + "/" + args.pfaY)
+    fillMap("PFAX1", INPUTLOC + "/" + args.pfaX1)
+    fillMap("PFAX2", INPUTLOC + "/" + args.pfaX2)
 
     # Set up the output directory and make it if it does not exist
     outpath = "%s/%s/%s"%(OUTBASE,stub,tag)
