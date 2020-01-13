@@ -65,8 +65,6 @@ class WeightExtractor:
         if not gFromCache:
             self.tfilepu = ROOT.TFile.Open(inputFilePU, "r"); self.tfilenopu = ROOT.TFile.Open(inputFileNOPU, "r")
             self.ttreepu = self.tfilepu.Get("compareReemulRecoSeverity9/events"); self.ttreenopu = self.tfilenopu.Get("compareReemulRecoSeverity9/events")
-            self.nevents = self.ttreepu.GetEntriesFast()
-
             for depth in self.depths:
                 for ts2Cut in self.ts2Cuts:
                     self.ietaDensity.setdefault(depth, {}).setdefault(ts2Cut, ROOT.TH1F("depth%d_nTPs_TS2gt%d"%(depth,ts2Cut), "depth%d_nTPs_TS2gt%d"%(depth,ts2Cut), 28, 0.5, 28.5))
