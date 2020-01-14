@@ -43,7 +43,7 @@ def prettyProfile(histo, name, color, markerStyle, pfa):
 
 def fillMap(pfaKey, inRootDir):
 
-    if inRootDir == "NULL": return
+    if "NULL" in inRootDir: return
 
     MAPPFAHISTOS[pfaKey] = {}
 
@@ -98,6 +98,7 @@ if __name__ == '__main__':
 
     # Figure out the stub to use for the output directory
     # If neither pfaX1 or pfaX2 have been specified then quit!
+    # The subtlety here is that pfaX1 takes precedence for the output directory
     if   args.pfaX1 != "NULL": stub = args.pfaX1.split("Closure/")[-1]
     elif args.pfaX2 != "NULL": stub = args.pfaX2.split("Closure/")[-1]
     else: quit()
