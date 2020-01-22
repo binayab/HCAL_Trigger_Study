@@ -1,10 +1,10 @@
 # This script runs on two HCAL ntuple files, assumed to be from the same GEN-SIM file(s) 
 # and matches TPs between the files (same event, same iphi, same ieta) to the get the TP ET
 # ratio. An example call to the script would be:
-# python studies/closureStudyPlotter.py subpath/to/nopu/ntuples/ subpath/to/ootpu/ntuples 0.5
+# python studies/closureStudyPlotter.py --nopu subpath/to/nopu/ntuples/ --pu subpath/to/ootpu/ntuples --minET 0.5 --tag WORSTTAGNAME
 # The last argument is the minimum TP ET to accept for both TPs in a match when computing the ratio
 
-import sys, os, ROOT, subprocess
+import sys, os, ROOT, subprocess, argparse
 from pu2nopuMap import PU2NOPUMAP 
 
 ROOT.gROOT.SetBatch(True)
@@ -19,6 +19,7 @@ def eventLoop(minTPET, nopuChain, ootChain, outfile):
 
     outfile.cd()
     h2 = ROOT.TH2F("tpET_ratio", ";i#eta;TP E_{T} Ratio", 57, -28.5, 28.5, 720, -0.014, 19.986)
+    h3 = ROOT.TH3F("tpET_corrl", ";TP E_{T} (t#bar{t} + 0PU);TP E_{T} (t#bar{t} + OOT PU);", 258, -0.25, 128.25, 258, -0.25, 128.25, 28, 0.5, 28.5)
 
     ootChain.SetBranchStatus("*", 0);     nopuChain.SetBranchStatus("*", 0)
     ootChain.SetBranchStatus("et", 1);    nopuChain.SetBranchStatus("et", 1)
@@ -93,17 +94,46 @@ def eventLoop(minTPET, nopuChain, ootChain, outfile):
                             if jET > 0:
                                 etFrac = iET / jET
                                 h2.Fill(ieta, etFrac)
-                                hotStart = jTP
-                                break
+
+                            h3.Fill(jET, iET, abs(ieta))
+                            hotStart = jTP
+                            break
 
         print "Processed event %d => %d..."%(iEvent,NEVENTS)
 
     h2.Write()
-    outfile.Close()
+
+    return h3
+
+# 2D histo of TP ET correlation for given range of ieta and range of TP ET
+def etCorrIetaSlicer(outfile, histo, ietaRange = []):
+
+    outfile.cd()
+
+    htemp = histo.Clone()
+
+    h2 = 0; ietaStr = ""
+    if len(ietaRange) == 0:
+        htemp.GetZaxis().SetRange(1, htemp.GetZaxis().GetNbins())
+    elif len(ietaRange) == 1:
+        htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(ietaRange[0]),htemp.GetZaxis().FindBin(ietaRange[0]))
+        ietaStr = "ieta%d"%(ietaRange[0])
+    elif len(ietaRange) == 2:
+        htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(ietaRange[0]),htemp.GetZaxis().FindBin(ietaRange[1]))
+        ietaStr = "ieta%dto%d"%(ietaRange[0],ietaRange[1])
+
+    htemp.GetZaxis().SetBit(ROOT.TAxis.kAxisRange)
+    h2 = htemp.Project3D("yx")
+
+    h2.SetTitle("")
+    h2.GetXaxis().SetTitle("TP E_{T} [GeV] (t#bar{t}+0PU)")
+    h2.GetYaxis().SetTitle("TP E_{T} [GeV] (t#bar{t}+OOT PU)")
+
+    h2.Write("TP_ETCorr_%s"%(ietaStr))
 
 # The analysis method does the handling of the input file path and gets the list of files.
 # From there the TChains are created and passed to the eventLoop
-def analysis(NOPUFileDir, OOTFileDir, minTPET):
+def analysis(NOPUFileDir, OOTFileDir, minTPET, tag):
 
     HCALNTUPLES = "/eos/uscms/store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/"
 
@@ -119,7 +149,7 @@ def analysis(NOPUFileDir, OOTFileDir, minTPET):
             puStub = sub
             break
 
-    outDir = "%s/nobackup/HCAL_Trigger_Study/input/Closure/%s_NOPU_%s_PU/TPETgt%0.1f"%(os.getenv("HOME"), nopuStub, puStub, minTPET)
+    outDir = "%s/nobackup/HCAL_Trigger_Study/input/Closure/%s/%s_NOPU_%s_PU/TPETgt%0.1f"%(os.getenv("HOME"), tag, nopuStub, puStub, minTPET)
     if not os.path.exists(outDir): os.makedirs(outDir)
 
     outFilePath = outDir + "/closure.root"
@@ -152,18 +182,30 @@ def analysis(NOPUFileDir, OOTFileDir, minTPET):
     
         cOOT.AddFile("root://cmseos.fnal.gov/"+item)
 
-    eventLoop(minTPET, cNOPU, cOOT, outFile)    
+    tpCorrHisto = eventLoop(minTPET, cNOPU, cOOT, outFile)    
+
+    for ieta in xrange(1,29):
+        etCorrIetaSlicer(outFile, tpCorrHisto, ietaRange = [ieta])
+
+    etCorrIetaSlicer(outFile, tpCorrHisto, ietaRange = [1,16])
+    etCorrIetaSlicer(outFile, tpCorrHisto, ietaRange = [17,20])
+    etCorrIetaSlicer(outFile, tpCorrHisto, ietaRange = [21,28])
 
     print "Done writing to ==> \"%s\""%(outFilePath)
     outFile.Close()
    
 if __name__ == '__main__':
 
-    NOPUFileDir = str(sys.argv[1])
-    OOTFileDir  = str(sys.argv[2])
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--tag"  , dest="tag"  , type=str  , default=""    , help="Unique tag for output")
+    parser.add_argument("--minET", dest="minET", type=float, default=0.0   , help="minEt selection")
+    parser.add_argument("--nopu" , dest="nopu" , type=str  , default="NULL", help="Path to inputs for nopu")
+    parser.add_argument("--pu"   , dest="pu"   , type=str  , default="NULL", help="Path to inputs for pu") 
+    args = parser.parse_args()
 
-    minTPET = -1.
-    try: minTPET = float(sys.argv[3])
-    except: minTPET = 0.0
+    NOPUFileDir = args.nopu
+    OOTFileDir  = args.pu
+    tag = args.tag
+    minTPET = args.minET    
 
-    analysis(NOPUFileDir, OOTFileDir, minTPET)
+    analysis(NOPUFileDir, OOTFileDir, minTPET, tag)

@@ -31,7 +31,12 @@ def prettyHisto(histo, xLabelSize, yLabelSize, zLabelSize, xTitleSize, yTitleSiz
 
 def prettyProfile(histo, name, color, markerStyle, pfa):
 
-    p = histo.ProfileX("p_%s_%s"%(pfa,name), 1, -1, "")
+    firstyBin = 1; option = ""
+    if "ETCorr" in name:
+        firstyBin = 2
+        option = "s"
+
+    p = histo.ProfileX("p_%s_%s"%(pfa,name), firstyBin, -1, option)
     p.SetMarkerStyle(markerStyle)
     p.SetMarkerSize(2)
     p.SetLineWidth(2)
@@ -67,16 +72,26 @@ def draw2DHistoAndProfile(canvas, keyName, histoName, zMax, color, markerStyle, 
 
     canvas.cd()
 
-    # Get nominal TP/RH profile
     theHisto = MAPPFAHISTOS[keyName][histoName]
 
     pPFAX = prettyProfile(theHisto, histoName, color, markerStyle, keyName)
-    prettyHisto(theHisto, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.72, 1.0)
+
+    if "ETCorr" in histoName: prettyHisto(theHisto, 0.050, 0.050, 0.050, 0.055, 0.055, 0.055, 1.0, 1.2, 1.0)
+    else:                     prettyHisto(theHisto, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.72, 1.0)
 
     # Set some visual options for the actual 2D TP/RH
     if not drewRatio:
         theHisto.SetContour(255)
-        theHisto.GetYaxis().SetRangeUser(0.1,2.)
+
+        if "ETCorr" in histoName:
+            theHisto.GetXaxis().SetRangeUser(-0.25,20.25)
+            theHisto.GetYaxis().SetRangeUser(-0.25,20.25)
+
+            theHisto.GetXaxis().SetTitle("TP E_{T} [GeV] (t#bar{t}+0PU)")
+            theHisto.GetYaxis().SetTitle("TP E_{T} [GeV] (t#bar{t}+OOTPU)")
+        else: 
+            theHisto.GetYaxis().SetRangeUser(0.1,2.)
+
         theHisto.GetZaxis().SetRangeUser(1,zMax)
         theHisto.Draw("COLZ")
         drewRatio = True
@@ -126,22 +141,40 @@ if __name__ == '__main__':
         if "TH2" in className:
             zMax = 2e3 
             
-            c1 = ROOT.TCanvas("%s"%(name), "%s"%(name), 2400, 1440); c1.cd(); c1.SetLogz()
+            c1 = 0; line = 0
+            if "ETCorr" in name:
 
-            ROOT.gPad.SetTopMargin(0.02625)
-            ROOT.gPad.SetBottomMargin(0.13375)
-            ROOT.gPad.SetLeftMargin(0.11)
-            ROOT.gPad.SetRightMargin(0.12)
+                c1 = ROOT.TCanvas("%s"%(name), "%s"%(name), 1500, 1440); c1.cd(); c1.SetLogz()
+
+                ROOT.gPad.SetTopMargin(0.026)
+                ROOT.gPad.SetBottomMargin(0.13)
+                ROOT.gPad.SetLeftMargin(0.13)
+                ROOT.gPad.SetRightMargin(0.14)
+
+                ROOT.gPad.SetGridx()
+                ROOT.gPad.SetGridy()
+
+                line = ROOT.TLine(-0.25, -0.25, 20.65, 20.65) 
+
+            else:
+
+                c1 = ROOT.TCanvas("%s"%(name), "%s"%(name), 2400, 1440); c1.cd(); c1.SetLogz()
+
+                ROOT.gPad.SetTopMargin(0.02625)
+                ROOT.gPad.SetBottomMargin(0.13375)
+                ROOT.gPad.SetLeftMargin(0.11)
+                ROOT.gPad.SetRightMargin(0.12)
+
+                line = ROOT.TLine(-28, 1, 28, 1) 
+
+            line.SetLineWidth(4)
+            line.SetLineColor(ROOT.kBlack)
+            line.SetLineStyle(2)
 
             drewRatio = False
             if "PFAX1" in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAX1", name, zMax, ROOT.kBlack, 20, drewRatio)
             if "PFAX2" in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAX2", name, zMax, ROOT.kRed  , 20, drewRatio)
             if "PFAY"  in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAY" , name, zMax, ROOT.kBlack, 4,  drewRatio)
     
-            l = ROOT.TLine(-28, 1, 28, 1) 
-            l.SetLineWidth(2)
-            l.SetLineColor(ROOT.kBlack)
-            l.SetLineStyle(2)
-            l.Draw("SAME")
-
+            line.Draw("SAME")
             c1.SaveAs("%s/%s.pdf"%(outpath,name))
