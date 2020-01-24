@@ -3,10 +3,12 @@
 A repository of scripts for extracting pulse filter weights and applying the weights. To start, setup a CMSSW release (assuming working on LPC) and perform some other initial steps:
 
 ```
-mkdir -p $HOME/nobackup/HCAL_Trigger_Study/{cmssw,plots}
-cd $HOME/nobackup/HCAL_Trigger_Study
+mkdir -p $HOME/nobackup
+cd $HOME/nobackup/
 
 git clone git@github.com:JHiltbrand/HCAL_Trigger_Study.git
+
+mkdir cmssw plots
 
 cd cmssw
 cmsrel CMSSW_10_6_0_pre4
@@ -62,5 +64,3 @@ The output files will be placed in the same location mentioned when running loca
 cd $HOME/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/TP/WithDepth_TTbar_OOT/root
 hadd histoCache.root histoCache_*
 ```
-
-
