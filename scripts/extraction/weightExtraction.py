@@ -939,10 +939,18 @@ if __name__ == '__main__':
         # Depths have been collapsed in each ieta during TP gen.
         depthStr = "NoDepth"
         if arg.depth: depthStr = "Depth"
+
+        # Default is to use the TTbar samples
+        # Switch to NuGun if necessary
+        processStr = "TTbar"
+        if arg.nugun: processStr = "NuGun"
                     
         # Construct the anticipated file path format
-        PUFile   = "%s/TTbar/%s/%s/%s.root"%(INPUTLOC,containStr, depthStr, puStr)
-        noPUFile = "%s/TTbar/%s/%s/NOPU.root"%(INPUTLOC,containStr, depthStr)
+        PUFile   = "%s/%s/%s/%s/%s.root"  %(INPUTLOC, processStr, containStr, depthStr, puStr)
+
+        # If running on NuGun samples there is not a NOPU.root
+        noPUFile = ""
+        if not arg.nugun: noPUFile = "%s/%s/%s/%s/NOPU.root"%(INPUTLOC, processStr, containStr, depthStr)
 
         # Finally, make an extractor and begin the event loop
         theExtractor = WeightExtractor(arg.scheme, PUFile, noPUFile, outPath)
@@ -957,5 +965,5 @@ if __name__ == '__main__':
         theExtractor.getWeightSummary("Fit")
 
         theExtractor.drawPulseShapes("PU")
-        theExtractor.drawPulseShapes("NOPU")
+        if not arg.nopu: theExtractor.drawPulseShapes("NOPU")
         theExtractor.drawWeightCorrs()

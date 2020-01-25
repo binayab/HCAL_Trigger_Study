@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# This is a condor submission script for submitting weight extraction jobs. Many of the args are
+# passed straight to weightExtraction.py at runtime.
+
 import sys, os, argparse, shutil, time
 
 date_and_time=time.strftime("%Y%m%d_%H%M%S")
@@ -25,16 +28,14 @@ NEVENTS = 9000
 nJobs = arg.nJobs
 eventsPerJob = 9000 / arg.nJobs
 
-specialStub = ""
-if arg.nugun: specialStub = "ForNuGun"
-
-exeName = "weightExtraction%s.py"%(specialStub)
+exeName = "weightExtraction.py"
 exeStub = "python %s"%(exeName)
 exeStub += " --scheme %s"%(arg.scheme)
 
 if arg.contain: exeStub += " --contain"
 if arg.depth:   exeStub += " --depth"
 if arg.oot:     exeStub += " --oot"
+if arg.nugun:   exeStub += " --nugun"
 
 taskStub   = arg.scheme + "_" + arg.tag + "_" + date_and_time
 outputDir  = "%s/plots/Weights/%s/%s/root"%(SANDBOX,arg.scheme,arg.tag)

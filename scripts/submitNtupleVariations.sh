@@ -8,62 +8,62 @@ SWITCH="$((2#${CODE}))"
 
 if (( ${SWITCH}&(2**12) ))
 then
-    python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA2
+    python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2
 fi
 
 if (( ${TOGGLE} == 0 ))
 then
-    # All PFA3p variations
+    # All PFA2p variations
     if (( ${SWITCH}&(2**0) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_AVE
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_AVE
     fi
     if (( ${SWITCH}&(2**1) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_AVE_UP
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_AVE_UP
     fi
     if (( ${SWITCH}&(2**2) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_AVE_DOWN
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_AVE_DOWN
     fi
     
     if (( ${SWITCH}&(2**3) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_PER_IETA
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_PER_IETA
     fi
     if (( ${SWITCH}&(2**4) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_PER_IETA_UP
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_PER_IETA_UP
     fi
     if (( ${SWITCH}&(2**5) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_PER_IETA_DOWN
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_PER_IETA_DOWN
     fi
      
     if (( ${SWITCH}&(2**6) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_AVE
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_DEPTH_AVE_AVE
     fi
     if (( ${SWITCH}&(2**7) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_AVE_UP
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_DEPTH_AVE_AVE_UP
     fi
     if (( ${SWITCH}&(2**8) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_AVE_DOWN
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_DEPTH_AVE_AVE_DOWN
     fi
      
     if (( ${SWITCH}&(2**9) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_PER_IETA
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_DEPTH_AVE_PER_IETA
     fi
     if (( ${SWITCH}&(2**10) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_PER_IETA_UP
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_DEPTH_AVE_PER_IETA_UP
     fi
     if (( ${SWITCH}&(2**11) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA3p_DEPTH_AVE_PER_IETA_DOWN
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA2p_DEPTH_AVE_PER_IETA_DOWN
     fi
 fi
 
@@ -73,53 +73,53 @@ then
     # All PFA1p variations
     if (( ${SWITCH}&(2**0) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_AVE
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_AVE
     fi
     if (( ${SWITCH}&(2**1) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_AVE_UP
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_AVE_UP
     fi
     if (( ${SWITCH}&(2**2) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_AVE_DOWN
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_AVE_DOWN
     fi
     
     if (( ${SWITCH}&(2**3) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_PER_IETA
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_PER_IETA
     fi
     if (( ${SWITCH}&(2**4) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_PER_IETA_UP
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_PER_IETA_UP
     fi
     if (( ${SWITCH}&(2**5) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_PER_IETA_DOWN
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_PER_IETA_DOWN
     fi
     
     if (( ${SWITCH}&(2**6) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_AVE
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_DEPTH_AVE_AVE
     fi
     if (( ${SWITCH}&(2**7) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_AVE_UP
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_DEPTH_AVE_AVE_UP
     fi
     if (( ${SWITCH}&(2**8) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_AVE_DOWN
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_DEPTH_AVE_AVE_DOWN
     fi
     
     if (( ${SWITCH}&(2**9) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_PER_IETA
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_DEPTH_AVE_PER_IETA
     fi
     if (( ${SWITCH}&(2**10) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_PER_IETA_UP
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_DEPTH_AVE_PER_IETA_UP
     fi
     if (( ${SWITCH}&(2**11) ))
     then
-        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --pfa PFA1p_DEPTH_AVE_PER_IETA_DOWN
+        python ${HOME}/nobackup/HCAL_Trigger_Study/scripts/submitHcalTrigNtuple.py --dataset ${DATASET} --scheme PFA1p_DEPTH_AVE_PER_IETA_DOWN
     fi
 fi
