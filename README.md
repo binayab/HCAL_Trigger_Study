@@ -117,29 +117,30 @@ python makeEventMap.py --oot
 
 will generate a python file `eventMap_NoContain_NoDepth_OOT.py` with a map `PU2NOPUMAP`. Copy this map into the `pu2nopuMap.py` file.
 
-## Extracting Pulse Filter Weights
+## Step 3: Extracting Pulse Filter Weights
 
-Weight extraction is done by the `weightExtraction(ForNuGun).py` script. Several commandline options can be specified and are documented below:
+Weight extraction is done by the `weightExtraction.py` script in the `extraction` subfolder. The script is run in two successive executions. The first execution does the looping over the HCAL ntuple files and extracts raw weights and writes raw histograms to a cache file. Then the script is run again to process the cache for making final plots and text files. Several commandline options can be specified and are documented below:
 
 ```
---tag       = A unique tag to keep the output organized in own folder.
---fromCache = Read back in root file for making plots (second step).
+--tag       = A unique tag to keep the output organized in its own folder.
+--fromCache = Read back in root file for making final plots and txt files (second step).
 --contain   = When extracting weights, read input files from within a "Contain" subfolder ("NoContain" default)
 --depth     = When extracting weights, read input files from within a "WithDepth" subfolder ("NoDepth" default)
 --oot       = When extracting weights, read the OOT.root file instead of the 50PU.root file.
+--nugun     = When extracting weights, assume we are running on nugun files (there will be no NOPU.root).
 --algo      = Specify which pulse filter to extract weights for (PFA1p, PFA1pp, PFA2p, PFA2pp)
 --evtRange  = First element is starting event to process and second element is number of events to process.
 ```
 
-An example call of the `weightExtraction.py` script to extract no-depth weights for PFA1p for 100 events starting at event 527 could be:
+A particular file/folder structure is anticipated when accessing the HCAL ntuple files. Most of the file path is built up based on the specified command line options. An example call of the `weightExtraction.py` script to extract no-depth weights for PFA1p for 100 events starting at event 527 (in the OOT pileup file) would be:
 
 ```
 python scripts/weightExtraction.py --oot --depth --algo PFA1p --tag WithDepth_TTbar_OOT --evtRange 527 100
 ```
 
-This will make an output file in `$HOME/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/TP/WithDepth_TTbar_OOT/root/histoCache_527.root`
+This will make an output file in `$HOME/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/WithDepth_TTbar_OOT/root/histoCache_527.root`
 
-When reading the cache file back in with the `--fromCache` flag, the file must be named `histoCache.root`
+Since this script is also used to run in batch, each job would gets its own unique number and the above directory would be filled with `histoCache_XYZ.root` files. These need to be hadded together into a single `histoCache.root` file which will be looked for by the script when specifying the `--fromCache` option.
 
 ### Running on LPC Condor
 
