@@ -1,6 +1,55 @@
 # HCAL Pulse Filter Study
 
-A repository of scripts for extracting pulse filter weights and applying the weights. To start, setup a CMSSW release (assuming working on LPC) and perform some other initial steps:
+This is a repository of scripts for extracting pulse filter weights and applying the weights. There are three distinct steps to go through in order to get to the level of extracting the weights.
+
+## Step 1: Producing a DIGI-RAW Files With and Without Pileup
+
+The first step is to take a ttbar and/or nugun GEN-SIM file and produce two daughter GEN-SIM-DIGI-RAW files for exactly two different pileup scenarios. One daughter file will have no pileup mixed in while the other file will have pileup mixed in for whichever special pileup scenario is being studied.
+
+Possible centrally-produced GEN-SIM files to be used could be:
+
+**ttbar:**
+https://cmsweb.cern.ch/das/request?input=dataset%3D%2FRelValTTbar_13%2FCMSSW_10_6_0_pre4-106X_upgrade2021_realistic_v4-v1%2FGEN-SIM&instance=prod/global
+
+**nugun:**
+https://cmsweb.cern.ch/das/request?view=list&limit=50&instance=prod%2Fglobal&input=dataset%3D%2FRelValNuGun%2FCMSSW_10_6_1_patch1-106X_mcRun3_2021_realistic_v3_rsb-v1%2FGEN-SIM
+
+With these input files we can use `cmsDriver.py` to make a `cmsRun` configuration file for completeing the GEN-SIM-DIGI-RAW step. In the case of mixing in pileup we can call an incantation like:
+
+```
+cmsDriver.py
+  --conditions auto:phase1_2019_realistic \
+  --pileup_input das:/RelValMinBias_13/CMSSW_10_6_0_pre4-106X_upgrade2021_realistic_v4-v1/GEN-SIM \
+  --filein das:/PUT/DAS/PATH/HERE \
+  --era Run3 \
+  --eventcontent FEVTDEBUGHLT \
+  -s DIGI:pdigi_valid,L1,DIGI2RAW,HLT:@relval2017 \
+  --datatier GEN-SIM-DIGI-RAW \
+  --pileup AVE_50_BX_25ns \
+  --geometry DB:Extended \
+  --conditions 106X_upgrade2021_realistic_v4 \
+  --fileout ootpu_cfg.py \
+  --no_exec
+```
+
+As the process of mixing in pileup is intensive, it is recommended that instead of specifying all three GEN-SIM files as input to just specify each one in its own configuration file to be able to run in parallel. To configure for mixing in only out-of-time pileup open up the generated python configuration file and make sure the following lines are configuring the mixing module:
+
+```
+process.mix.input.nbPileupEvents.averageNumber = cms.double(50.000000)
+process.mix.input.manage_OOT = cms.untracked.bool(True)
+process.mix.input.OOT_type = cms.untracked.string("Poisson")
+process.mix.input.Special_Pileup_Studies = cms.untracked.string("Fixed ITPU Vary OOTPU")
+process.mix.bunchspace = cms.int32(25)
+process.mix.minBunch = cms.int32(-10)
+process.mix.maxBunch = cms.int32(4)
+```
+
+An equivalent `cmsRun` configuration file can be made for the case of no pileup and can be done by excluding the `--pileup_input` and `--pileup` flags and chaning the name of the output file when calling `cmsDriver.py`.
+
+
+## Step 2: Making HCAL Ntuples
+
+To start, setup a CMSSW release (assuming working on LPC) and perform some other initial steps:
 
 ```
 mkdir -p $HOME/nobackup
