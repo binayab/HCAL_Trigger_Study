@@ -7,7 +7,7 @@ date_and_time=time.strftime("%Y%m%d_%H%M%S")
 usage = "usage: %prog [options]"
 parser = argparse.ArgumentParser(usage)
 parser.add_argument("--tag"     , dest="tag"     , help="Unique tag for output"   , type=str     , required=True)
-parser.add_argument("--algo"    , dest="algo"    , help="Which algo"              , type=str     , required=True)
+parser.add_argument("--scheme"  , dest="scheme"  , help="Which scheme"            , type=str     , required=True)
 parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
 parser.add_argument("--nJobs"   , dest="nJobs"   , help="number of jobs"          , type=int     , default=30)
 
@@ -20,7 +20,7 @@ entriesPerJob = NENTRIES / arg.nJobs
 exeStub = "python depthStudyPlotter.py"
 
 taskDir = "DepthStudy_" + date_and_time
-outputDir  = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Depths/%s/%s/root"%(arg.algo,arg.tag)
+outputDir  = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Depths/%s/%s/root"%(arg.scheme,arg.tag)
 workingDir = "/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/condor/%s"%(taskDir)
 
 if not os.path.exists(outputDir):  os.makedirs(outputDir)
