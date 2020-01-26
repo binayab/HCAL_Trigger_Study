@@ -128,14 +128,14 @@ Weight extraction is done by the `weightExtraction.py` script in the `extraction
 --depth     = When extracting weights, read input files from within a "WithDepth" subfolder ("NoDepth" default)
 --oot       = When extracting weights, read the OOT.root file instead of the 50PU.root file.
 --nugun     = When extracting weights, assume we are running on nugun files (there will be no NOPU.root).
---algo      = Specify which pulse filter to extract weights for (PFA1p, PFA1pp, PFA2p, PFA2pp)
+--scheme    = Specify which pulse filter to extract weights for (PFA1p, PFA1pp, PFA2p, PFA2pp)
 --evtRange  = First element is starting event to process and second element is number of events to process.
 ```
 
 A particular file/folder structure is anticipated when accessing the HCAL ntuple files. Most of the file path is built up based on the specified command line options. An example call of the `weightExtraction.py` script to extract no-depth weights for PFA1p for 100 events starting at event 527 (in the OOT pileup file) would be:
 
 ```
-python scripts/weightExtraction.py --oot --depth --algo PFA1p --tag WithDepth_TTbar_OOT --evtRange 527 100
+python scripts/weightExtraction.py --oot --depth --scheme PFA1p --tag WithDepth_TTbar_OOT --evtRange 527 100
 ```
 
 This will make an output file in `$HOME/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/WithDepth_TTbar_OOT/root/histoCache_527.root`
@@ -147,7 +147,7 @@ Since this script is also used to run in batch, each job would gets its own uniq
 A condor submission script, `submitWeightExtraction.py` is provided to submit jobs and speed up the extraction of weights when running on an entire input file. An example call to this script would be:
 
 ```
-python scripts/submitWeightExtraction.py --oot --depth --algo PFA1p --tag WithDepth_TTbar_OOT --nJobs 90
+python scripts/submitWeightExtraction.py --oot --depth --scheme PFA1p --tag WithDepth_TTbar_OOT --nJobs 90
 ```
 
 The output files will be placed in the same location mentioned when running locally and one needs to hadd these files.
