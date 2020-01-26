@@ -228,11 +228,11 @@ if __name__ == '__main__':
     fillMap("PFAX2", INPUTLOC + "/" + args.pfaX2)
 
     if args.pfaX1Err:
-        fillMap("PFAX1Up"  , INPUTLOC + "/" + args.pfaX1 + "/Up"  )
-        fillMap("PFAX1Down", INPUTLOC + "/" + args.pfaX1 + "/Down")
+        fillMap("PFAX1Up"  , INPUTLOC + "/" + args.pfaX1 + "_UP"  )
+        fillMap("PFAX1Down", INPUTLOC + "/" + args.pfaX1 + "_DOWN")
     if args.pfaX2Err:              
-        fillMap("PFAX2Up"  , INPUTLOC + "/" + args.pfaX2 + "/Up"  )
-        fillMap("PFAX2Down", INPUTLOC + "/" + args.pfaX2 + "/Down")
+        fillMap("PFAX2Up"  , INPUTLOC + "/" + args.pfaX2 + "_UP"  )
+        fillMap("PFAX2Down", INPUTLOC + "/" + args.pfaX2 + "_DOWN")
        
     # Set up the output directory and make it if it does not exist
     outpath = "%s/%s/%s"%(OUTBASE,stub,tag)

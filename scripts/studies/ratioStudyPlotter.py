@@ -166,6 +166,7 @@ def analysis(PFAXFileDir, outDir):
         ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[0.5,10],[ieta])
         ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[10, 1000],[ieta])
 
+        ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.0,10],[ieta])
         ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.5,10],[ieta])
         ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[10, 1000],[ieta])
 
@@ -191,9 +192,9 @@ if __name__ == '__main__':
 
     HOME = os.getenv("HOME")
     INPUTLOC = "/eos/uscms/store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples"
-    OUTPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Ratios" 
+    OUTPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Ratios"%(HOME)
 
     PFAXFileStub = str(sys.argv[1])
-    outputStub   = str(sys.argv[2])
+    outputStub   = PFAXFileStub
 
     analysis(INPUTLOC + "/" + PFAXFileStub, OUTPUTLOC + "/" + outputStub)
