@@ -7,8 +7,6 @@ cmssw
 plots
 temp
 note
-**pu2nopuMap.py
 **eventMap.py
-scripts/algo_weights.py
 scripts/analyze_HcalTrig_TEST.py
 scripts/towerBounds.txt
