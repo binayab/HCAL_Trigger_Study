@@ -4,7 +4,7 @@ This is a repository of scripts for extracting pulse filter weights and applying
 
 DISCLAIMER: Any file paths implicitly assumed customized for the author and will not work out-of-the-box.
 
-## Step 0: Some House Cleaning
+## Step 0: Initializing Workspace
 
 First let's setup a working area for everything. If on LPC, making a `nobackup` are is not necessary. If not at LPC it is encouraged to make a `nobackup` folder as it is assumed by many scripts in this repository.
 
@@ -149,6 +149,12 @@ Thus, for example, to generate ntuples when reconstructing with the PFA2p, PFA1p
      --schemes PFA1p PFA2p
  ```
 
+In this case, the output ROOT files with the HCAL ntuples we placed at:
+
+```
+root://cmseos.fnal.gov///store/user/USERNAME/HCAL_Trigger_Study/hcalNtuples/TTbar/20200126/PFA(1,2)p_(PER_IETA,AVE)_MEAN"
+```
+
 ## Step 3: Extracting Pulse Filter Weights
 
 Weight extraction is done by the `weightExtraction.py` script in the `extraction` subfolder. The script is run in two successive executions. The first execution does the looping over the HCAL ntuple files and extracts raw weights and writes raw histograms to a cache file. Then the script is run again to process the cache for making final plots and text files. Several commandline options can be specified and are documented below:
@@ -188,3 +194,9 @@ The output files will be placed in the same location mentioned when running loca
 cd $HOME/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/TP/WithDepth_TTbar_OOT/root
 hadd histoCache.root histoCache_*
 ```
+
+## Step 4: Applying the Weights and Generating New Ntuples
+
+When extracting weights for a pulse filter scheme `weightExtraction.py` we will get a `weightSummary(Mean/Fit)Python.py` file that will have the weights formatted in the correct format to be used by the trigger primitive reconstruction algorithm in CMSSW. To use these weights, copy them into the `algo_weights.py` file---into the dictionary---in the `scripts` folder. This script will get used when submitting HCAL ntuple production jobs. Whatever key names are provided in that dictionary can be used on the commandline when running `analyze_HcalTrig.py` (see above section).
+
+Contrary to when generating ntuples to extract weights with, ensure that pulse containment is un-commented in `CalibCalorimetry/HcalTPGAlgos/src/HcaluLUTTPGCoder.cc` and recompile.
