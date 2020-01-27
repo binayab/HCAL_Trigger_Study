@@ -19,12 +19,12 @@ ROOT.TH2.SetDefaultSumw2()
 # with fits, tables of weights and histograms).
 class WeightExtractor:
 
-    def __init__(self, scheme, inputFilePU, inputFileNOPU, outputPath):
+    def __init__(self, scheme, inputFilePU, inputFileNOPU, outputPath, withDepth):
 
         self.outPath = outputPath              # Base outpath to write everything to
         self.cacheLoc = "%s/root"%(outputPath) # Location to cache histograms in root file
 
-        self.withDepth = "NoDepth" not in inputFilePU
+        self.withDepth = withDepth # Toggle if we should be extracting on per-depth basis
 
         self.nopuUsed = inputFileNOPU != "" # When running on nugun sample there is no NOPU file
 
@@ -147,7 +147,6 @@ class WeightExtractor:
             self.ttreepu.GetEntry(iEvent)
             self.ttreenopu.GetEntry(PU2NOPUMAP[self.ttreepu.event])
 
-            print self.ttreepu.event
             if self.ttreepu.event != self.ttreenopu.event:
                 print "EVENT MISMATCH, SKIPPING THIS EVENT ENTRY!"
                 continue
@@ -579,100 +578,102 @@ class WeightExtractor:
 
                         if ts2Cut != self.ts2Cut: continue
 
-                        histo = self.weightHistos[depth][ieta][iWeight][ts2Cut]
-                        if histo.Integral() == 0:
-                            self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
-                            self.fitStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
-                            self.fitSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
-                            self.meanWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
-                            self.meanStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
-                            self.meanSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                        for iWeight in self.iWeights:
 
-                            continue 
+                            histo = self.weightHistos[depth][ieta][iWeight][ts2Cut]
+                            if histo.Integral() == 0:
+                                self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                                self.fitStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                                self.fitSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                                self.meanWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                                self.meanStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                                self.meanSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
 
-                        numEntries = float(histo.GetEntries())
-                        histo.Scale(1./histo.Integral())
+                                continue 
 
-                        # Keys of these dictionaries correspond to rebinnings
-                        rebinHistos     = {1 : 0, 2 : 0, 3 : 0, 4 : 0}
-                        rebinFits       = {1 : 0, 2 : 0, 3 : 0, 4 : 0}
-                        rebinFitWeights    = numpy.zeros((5,1)); rebinMeanWeights    = numpy.zeros((5,1))
-                        rebinFitStatErrors = numpy.zeros((5,1)); rebinMeanStatErrors = numpy.zeros((5,1)) 
-                        for rebin in rebinHistos.keys(): rebinHistos[rebin] = histo.Rebin(rebin, "r%d_i%d_d%d_w%d_TS2gt%d"%(rebin,ieta,depth,iWeight,ts2Cut))
+                            numEntries = float(histo.GetEntries())
+                            histo.Scale(1./histo.Integral())
 
-                        for rebin, rHisto in rebinHistos.iteritems():
+                            # Keys of these dictionaries correspond to rebinnings
+                            rebinHistos     = {1 : 0, 2 : 0, 3 : 0, 4 : 0}
+                            rebinFits       = {1 : 0, 2 : 0, 3 : 0, 4 : 0}
+                            rebinFitWeights    = numpy.zeros((5,1)); rebinMeanWeights    = numpy.zeros((5,1))
+                            rebinFitStatErrors = numpy.zeros((5,1)); rebinMeanStatErrors = numpy.zeros((5,1)) 
+                            for rebin in rebinHistos.keys(): rebinHistos[rebin] = histo.Rebin(rebin, "r%d_i%d_d%d_w%d_TS2gt%d"%(rebin,ieta,depth,iWeight,ts2Cut))
 
-                            masterFunc = 0
-                            name1 = "f1_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString1 = "[0]*TMath::CauchyDist(x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc1 = 0
+                            for rebin, rHisto in rebinHistos.iteritems():
 
-                            theFunc1 = ROOT.TF1(name1, funcString1, -5, 2.0)
+                                masterFunc = 0
+                                name1 = "f1_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString1 = "[0]*TMath::CauchyDist(x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc1 = 0
 
-                            theFunc1.SetParameters(0.2, -0.3, 2.5, 0.3, 2.5)
-                            theFunc1.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
-                            theFunc1.SetParLimits(0, 0.0, 5.0)
-                            theFunc1.SetParLimits(1, -5.0, 0.0)
-                            theFunc1.SetParLimits(2, 0.0, 5.0)
-                            theFunc1.SetParLimits(3, 0.0, 5.0)
-                            theFunc1.SetParLimits(3, 0.0, 25.0)
+                                theFunc1 = ROOT.TF1(name1, funcString1, -5, 2.0)
 
-                            name2 = "f2_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString2 = "[0]*TMath::Gaus(x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc2 = 0
+                                theFunc1.SetParameters(0.2, -0.3, 2.5, 0.3, 2.5)
+                                theFunc1.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
+                                theFunc1.SetParLimits(0, 0.0, 5.0)
+                                theFunc1.SetParLimits(1, -5.0, 0.0)
+                                theFunc1.SetParLimits(2, 0.0, 5.0)
+                                theFunc1.SetParLimits(3, 0.0, 5.0)
+                                theFunc1.SetParLimits(3, 0.0, 25.0)
 
-                            theFunc2 = ROOT.TF1(name2, funcString2, -5, 2.0)
+                                name2 = "f2_i%d_d%d_r%d_w%d_TS2gt%d"%(ieta,depth,rebin,iWeight,ts2Cut); funcString2 = "[0]*TMath::Gaus(x, [1], [2])*TMath::Landau(-x, [3], [4])"; theFunc2 = 0
 
-                            theFunc2.SetParameters(0.2, -0.3, 2.5, 0.3, 2.5)
-                            theFunc2.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
-                            theFunc2.SetParLimits(0, 0.0, 5.0)
-                            theFunc2.SetParLimits(1, -5.0, 0.0)
-                            theFunc2.SetParLimits(2, 0.0, 5.0)
-                            theFunc2.SetParLimits(3, 0.0, 5.0)
-                            theFunc2.SetParLimits(3, 0.0, 25.0)
+                                theFunc2 = ROOT.TF1(name2, funcString2, -5, 2.0)
 
-                            rHisto.Fit(name1, "QMREWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
-                            rHisto.Fit(name2, "QMREWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
-                            
-                            chi1ndf = 0; chi2ndf = 0 
-                            try: chi1ndf = theFunc1.GetChisquare() / theFunc1.GetNDF()
-                            except: chi1ndf = 999999
-                            try: chi2ndf = theFunc2.GetChisquare() / theFunc2.GetNDF()
-                            except: chi2ndf = 999998
+                                theFunc2.SetParameters(0.2, -0.3, 2.5, 0.3, 2.5)
+                                theFunc2.SetParNames("A", "mu", "sigma", "lmu", "lsigma")
+                                theFunc2.SetParLimits(0, 0.0, 5.0)
+                                theFunc2.SetParLimits(1, -5.0, 0.0)
+                                theFunc2.SetParLimits(2, 0.0, 5.0)
+                                theFunc2.SetParLimits(3, 0.0, 5.0)
+                                theFunc2.SetParLimits(3, 0.0, 25.0)
 
-                            #if ieta <= 20: masterFunc = theFunc1
-                            #else: masterFunc = theFunc2
+                                rHisto.Fit(name1, "QMREWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                                rHisto.Fit(name2, "QMREWL") # https://root.cern.ch/doc/master/classTH1.html#a63eb028df86bc86c8e20c989eb23fb2a
+                                
+                                chi1ndf = 0; chi2ndf = 0 
+                                try: chi1ndf = theFunc1.GetChisquare() / theFunc1.GetNDF()
+                                except: chi1ndf = 999999
+                                try: chi2ndf = theFunc2.GetChisquare() / theFunc2.GetNDF()
+                                except: chi2ndf = 999998
 
-                            if   chi1ndf > 0 and chi1ndf < chi2ndf: masterFunc = theFunc1
-                            elif chi2ndf > 0 and chi2ndf < chi1ndf: masterFunc = theFunc2
-                            else: masterFunc = theFunc1
+                                #if ieta <= 20: masterFunc = theFunc1
+                                #else: masterFunc = theFunc2
 
-                            masterFunc.SetNpx(1000);
+                                if   chi1ndf > 0 and chi1ndf < chi2ndf: masterFunc = theFunc1
+                                elif chi2ndf > 0 and chi2ndf < chi1ndf: masterFunc = theFunc2
+                                else: masterFunc = theFunc1
 
-                            # Get weight from peak of fit function (the mode)
-                            # Stat error is the "width" parameter of the fit / number of entries
-                            rebinFitWeights[rebin] = masterFunc.GetMaximumX(-5.0,5.0)
-                            rebinFitStatErrors[rebin] = masterFunc.GetParameter("sigma") / math.sqrt(numEntries) 
-                            rebinFits[rebin] = masterFunc
+                                masterFunc.SetNpx(1000);
 
-                            # Get the weight from the simple mean of the distribution
-                            # The stat error here is the simple stddev / number of entries
-                            rebinMeanWeights[rebin] = rHisto.GetMean() 
-                            rebinMeanStatErrors[rebin] = rHisto.GetStdDev() / math.sqrt(numEntries)
+                                # Get weight from peak of fit function (the mode)
+                                # Stat error is the "width" parameter of the fit / number of entries
+                                rebinFitWeights[rebin] = masterFunc.GetMaximumX(-5.0,5.0)
+                                rebinFitStatErrors[rebin] = masterFunc.GetParameter("sigma") / math.sqrt(numEntries) 
+                                rebinFits[rebin] = masterFunc
 
-                        # From the five different fits of the histogram determine the standard dev of the weights 
-                        theFitWeight = rebinFitWeights[self.rebin]; theFitStatError = rebinFitStatErrors[self.rebin]
-                        theFitSystError = abs(numpy.amax(rebinFitWeights[1:])-numpy.amin(rebinFitWeights[1:]))
-                        self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theFitWeight)
-                        self.fitStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theFitStatError)
-                        self.fitSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theFitSystError)
+                                # Get the weight from the simple mean of the distribution
+                                # The stat error here is the simple stddev / number of entries
+                                rebinMeanWeights[rebin] = rHisto.GetMean() 
+                                rebinMeanStatErrors[rebin] = rHisto.GetStdDev() / math.sqrt(numEntries)
 
-                        # From the five different raw histograms determine the standard dev of the means 
-                        theMeanWeight = rebinMeanWeights[self.rebin]; theMeanStatError = rebinMeanStatErrors[self.rebin]
-                        theMeanSystError = abs(numpy.amax(rebinMeanWeights[1:])-numpy.amin(rebinMeanWeights[1:]))
-                        self.meanWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanWeight)
-                        self.meanStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanStatError)
-                        self.meanSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanSystError)
+                            # From the five different fits of the histogram determine the standard dev of the weights 
+                            theFitWeight = rebinFitWeights[self.rebin]; theFitStatError = rebinFitStatErrors[self.rebin]
+                            theFitSystError = abs(numpy.amax(rebinFitWeights[1:])-numpy.amin(rebinFitWeights[1:]))
+                            self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theFitWeight)
+                            self.fitStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theFitStatError)
+                            self.fitSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theFitSystError)
 
-                        if save:
-                            for rebin in xrange(1,5):
-                                self.drawWeightHisto(ieta, depth, iWeight, rebin, ts2Cut, rebinHistos, rebinFits, rebinFitWeights, rebinFitStatErrors, theFitSystError, rebinMeanWeights, rebinMeanStatErrors, theMeanSystError) 
+                            # From the five different raw histograms determine the standard dev of the means 
+                            theMeanWeight = rebinMeanWeights[self.rebin]; theMeanStatError = rebinMeanStatErrors[self.rebin]
+                            theMeanSystError = abs(numpy.amax(rebinMeanWeights[1:])-numpy.amin(rebinMeanWeights[1:]))
+                            self.meanWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanWeight)
+                            self.meanStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanStatError)
+                            self.meanSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanSystError)
+
+                            if save:
+                                for rebin in xrange(1,5):
+                                    self.drawWeightHisto(ieta, depth, iWeight, rebin, ts2Cut, rebinHistos, rebinFits, rebinFitWeights, rebinFitStatErrors, theFitSystError, rebinMeanWeights, rebinMeanStatErrors, theMeanSystError) 
 
     # Method for calculating the averaged-over-depth weight for each ieta and average-over-depth for HB, HE1, HE2
     def getDepthAverageWeightsAndErrors(self, weightDict, statErrorDict, systErrorDict):
@@ -784,7 +785,7 @@ class WeightExtractor:
                         if self.withDepth and depth == 0 or not self.withDepth and depth > 0: continue
 
                         if weights[depth][ieta][iWeight][self.ts2Cut] == -999: 
-                            if depth == self.depths[-1]: str2Write += emptyStr
+                            if depth == depths[-1]: str2Write += emptyStr
                             else: str2Write += emptyStr 
                         else: 
                             weightStr = "%3.2f"%(weights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
@@ -906,7 +907,6 @@ if __name__ == '__main__':
     parser.add_argument("--nugun"     , dest="nugun"     , help="Run on nugun samples"     , default=False, action="store_true")
     parser.add_argument("--scheme"    , dest="scheme"    , help="Which pulse filter scheme", type=str     , default="ALGO")
     parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"         , type=int     , nargs="+", default=[-1,1])
-    
     arg = parser.parse_args()
 
     # Intend for things to work inside sandbox environment
@@ -954,11 +954,11 @@ if __name__ == '__main__':
         if not arg.nugun: noPUFile = "%s/%s/%s/%s/NOPU.root"%(INPUTLOC, processStr, containStr, depthStr)
 
         # Finally, make an extractor and begin the event loop
-        theExtractor = WeightExtractor(arg.scheme, PUFile, noPUFile, outPath)
+        theExtractor = WeightExtractor(arg.scheme, PUFile, noPUFile, outPath, arg.depth)
         theExtractor.eventLoop(eventRange)
 
     else:
-        theExtractor = WeightExtractor(arg.scheme, "", "", outPath)
+        theExtractor = WeightExtractor(arg.scheme, "", "", outPath, arg.depth)
 
         theExtractor.loadHistograms()
         theExtractor.extractFitWeights(save=True)
@@ -966,5 +966,5 @@ if __name__ == '__main__':
         theExtractor.getWeightSummary("Fit")
 
         theExtractor.drawPulseShapes("PU")
-        if not arg.nopu: theExtractor.drawPulseShapes("NOPU")
+        if not arg.nugun: theExtractor.drawPulseShapes("NOPU")
         theExtractor.drawWeightCorrs()
