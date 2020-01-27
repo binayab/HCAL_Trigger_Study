@@ -97,7 +97,13 @@ git checkout -b JCH_OOTPU_dev --track origin/JCH_OOTPU_dev
 scram b -j8
 ```
 
-Once these steps are completed we are able to process the GEN-SIM-DIGI-RAW files and make ntuples. An example of doing this would be:
+Before running, make sure to turn off pulse containment in `CalibCalorimetry/HcalTPGAlgos/src/HcaluLUTTPGCoder.cc` by commenting out the line:
+
+```containmentCorrection2TSCorrected = pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);```
+
+then recompile again.
+
+Once these steps are completed we are able to process the GEN-SIM-DIGI-RAW files and make ntuples for extracting pulse filter weights. An example of doing this would be:
 
 ```
 cd $HOME/nobackup/HCAL_Trigger_Study/scripts
