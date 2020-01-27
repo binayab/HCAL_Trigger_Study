@@ -44,6 +44,7 @@ def generate_job_steerer(workingDir, schemeWeights, outputDir, CMSSW_VERSION):
     scriptFile.write("scramv1 b ProjectRename\n")
     scriptFile.write("eval `scramv1 runtime -sh`\n\n")
     scriptFile.write("cmsRun analyze_HcalTrig.py %s ${INPUTFILE} ${JOB}\n\n"%(schemeWeights))
+    scriptFile.write("xrdcp -f hcalNtuple_${JOB}.root %s 2>&1\n"%(outputDir))
     scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
     scriptFile.write("rm -r %s\n"%(CMSSW_VERSION))
     scriptFile.close()
@@ -55,7 +56,7 @@ def generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION):
     condorSubmit.write("Executable           =  %s/runJob.sh\n"%(workingDir))
     condorSubmit.write("Universe             =  vanilla\n")
     condorSubmit.write("Requirements         =  OpSys == \"LINUX\" && Arch ==\"x86_64\"\n")
-    condorSubmit.write("Request_Memory       =  5 Gb\n")
+    condorSubmit.write("Request_Memory       =  2.5 Gb\n")
     condorSubmit.write("Output               =  %s/logs/$(Cluster)_$(Process).stdout\n"%(workingDir))
     condorSubmit.write("Error                =  %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
     condorSubmit.write("Log                  =  %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
@@ -98,15 +99,10 @@ if __name__ == '__main__':
         variations.append("_UP")
         variations.append("_DOWN")
 
-    # Figure out the physics process (most likely ttbar) to be used in naming folders
-    # Likewise, get the list of input files to run over
-    physProcess = "";  inputFiles = []
-    if "/" not in dataset:
-        physProcess = dataset
-        inputFiles.append(dataset)
-    else:
-        inputFiles = files4Dataset(dataset)
-        physProcess = dataset.split("/")[1].split("_")[0]
+    # Get the list of input files to run over
+    inputFiles = []
+    if "/" not in dataset: inputFiles.append(dataset)
+    else: inputFiles = files4Dataset(dataset)
 
     taskDir = strftime("%Y%m%d_%H%M%S")
     hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(os.getenv("HOME"))
@@ -131,8 +127,8 @@ if __name__ == '__main__':
 
                 schemeWeights += variation
                 
-                outputDir = "root://cmseos.fnal.gov///store/user/%s/HCAL_Trigger_Study/hcalNtuples/%s/%s/%s"%(USER, physProcess, tag, schemeWeights)
-                workingDir = "%s/condor/%s_%s_%s_%s"%(hcalDir, physProcess, schemeWeights, tag, taskDir)
+                outputDir = "root://cmseos.fnal.gov///store/user/%s/HCAL_Trigger_Study/hcalNtuples/%s/%s"%(USER, tag, schemeWeights)
+                workingDir = "%s/condor/%s_%s_%s"%(hcalDir, schemeWeights, tag, taskDir)
                 
                 # After defining the directory to work the job in and output to, make them
                 subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
@@ -179,6 +175,6 @@ if __name__ == '__main__':
 
                 subprocess.call(["tar", "--exclude-caches-all", "--exclude-vcs", "-zcf", "%s/%s.tar.gz"%(workingDir,CMSSW_VERSION), "-C", "%s/.."%(CMSSW_BASE), CMSSW_VERSION, "--exclude=tmp"])
                 
-                if args.noSubmit: quit()
+                if args.noSubmit: continue
                 
                 os.system("condor_submit %s/condorSubmit.jdl"%(workingDir))
