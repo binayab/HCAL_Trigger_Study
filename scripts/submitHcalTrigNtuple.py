@@ -114,6 +114,8 @@ if __name__ == '__main__':
     # Get CMSSW environment
     CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
 
+    USER = os.getenv("USER")
+
     # Based on command line input, construct all versions of the weights to use
     # and submit jobs for each version
     for scheme in schemes:
@@ -129,7 +131,7 @@ if __name__ == '__main__':
 
                 schemeWeights += variation
                 
-                outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s/%s/%s"%(physProcess, tag, schemeWeights)
+                outputDir = "root://cmseos.fnal.gov///store/user/%s/HCAL_Trigger_Study/hcalNtuples/%s/%s/%s"%(USER, physProcess, tag, schemeWeights)
                 workingDir = "%s/condor/%s_%s_%s_%s"%(hcalDir, physProcess, schemeWeights, tag, taskDir)
                 
                 # After defining the directory to work the job in and output to, make them
