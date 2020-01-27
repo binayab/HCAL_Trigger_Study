@@ -1,32 +1,28 @@
 # First script directly running on HCAL ntuples files
-# An example call could be:
-# python studies/ratioStudyPlotter.py subpath/to/scheme/ntuples subpath/to/raw/histograms
 
-import sys, os, ROOT, subprocess
+# An example call could be:
+# python studies/ratioStudyPlotter.py subpath/to/scheme/ntuples
+
+# The subpath is assumed to start inside HCAL_Trigger_Study/hcalNtuples in the user's EOS area
+
+import sys, os, ROOT, subprocess, argparse
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
 ROOT.gStyle.SetLineWidth(4)
 ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.TH1.SetDefaultSumw2()
+ROOT.TH2.SetDefaultSumw2()
 
 # From the events do a draw to make a 3D histo with RH or TP ET on z, TP/RH ratio on y and ieta on x
 # Regardless if RH or TP ET on z, always impose TP ET > 0.5
 def ratioTPVsRH_Eta_ET(evtsTree, basis = "TP", bx = "(1==1)"):
 
-    etBins = 0; xmin = 0; xmax = 0; etBranch = ""; tpMinSelection = "TP_energy>0.5"
-    if basis == "TP":
-        etBranch = "TP_energy"
-        etBins = 257 
-        zmin = -0.25
-        zmax = 128.25
-    else:
-        etBranch = "RH_energy"
-        etBins = 257 
-        zmin = -0.25
-        zmax = 128.25
+    etBranch = ""; tpMinSelection = "TP_energy>0.5"
+    if basis == "TP": etBranch = "TP_energy"
+    else:             etBranch = "RH_energy"
 
-    h3 = ROOT.TH3F("h3_%sET"%(basis), "h3_%sET"%(basis), 57, -28.5, 28.5, 720, 0., 20.0, etBins, zmin, zmax)
+    h3 = ROOT.TH3F("h3_%sET"%(basis), "h3_%sET"%(basis), 57, -28.5, 28.5, 720, 0., 20.0, 257, -0.25, 128.25)
 
     evtsTree.Draw("%s:TP_energy/RH_energy:ieta>>h3_%sET"%(etBranch,basis), "tp_soi!=255 && %s && RH_energy>0. && %s"%(tpMinSelection,bx))
 
@@ -190,11 +186,18 @@ def analysis(PFAXFileDir, outDir):
    
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--inputSubPath"  , dest="inputSubPath"   , help="Subpath to input files"  , type=str , required=True)
+    args = parser.parse_args()
+
+
     HOME = os.getenv("HOME")
-    INPUTLOC = "/eos/uscms/store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples"
+    USER = os.getenv("USER")
+    INPUTLOC = "/eos/uscms/store/user/%s/HCAL_Trigger_Study/hcalNtuples"%(USER)
     OUTPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Ratios"%(HOME)
 
-    PFAXFileStub = str(sys.argv[1])
+    # Let the output folder structure mirror the input folder structure
+    PFAXFileStub = args.inputSubPath
     outputStub   = PFAXFileStub
 
     analysis(INPUTLOC + "/" + PFAXFileStub, OUTPUTLOC + "/" + outputStub)

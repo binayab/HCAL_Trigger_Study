@@ -1,7 +1,11 @@
 # This script runs on two HCAL ntuple files, assumed to be from the same GEN-SIM file(s) 
 # and matches TPs between the files (same event, same iphi, same ieta) to the get the TP ET
-# ratio. An example call to the script would be:
+# ratio.
+
+# An example call to the script would be:
 # python studies/closureStudyPlotter.py --nopu subpath/to/nopu/ntuples/ --pu subpath/to/ootpu/ntuples --minET 0.5 --tag WORSTTAGNAME
+
+# The subpaths are assumed to be HCAL_Trigger_Study/hcalNtuples in the user's EOS area
 # The last argument is the minimum TP ET to accept for both TPs in a match when computing the ratio
 
 import sys, os, ROOT, subprocess, argparse
@@ -9,9 +13,9 @@ from pu2nopuMap import PU2NOPUMAP
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
-ROOT.gStyle.SetLineWidth(4)
 ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.TH1.SetDefaultSumw2()
+ROOT.TH2.SetDefaultSumw2()
 
 # The main looping function that takes in a TChain for nopu and oot pu files, finds the
 # matched TPs and fills a raw 2D histogram with the ratio.
@@ -139,6 +143,8 @@ def analysis(NOPUFileDir, OOTFileDir, minTPET, tag):
 
     onEOS = "store" in NOPUFileDir
 
+    # Determine which set of weights for which filter was used
+    # when running on the no pileup and pileup samples
     nopuStub = ""; puStub = ""
     for sub in NOPUFileDir.split("/"):
         if "PFA" in sub:
@@ -149,7 +155,7 @@ def analysis(NOPUFileDir, OOTFileDir, minTPET, tag):
             puStub = sub
             break
 
-    outDir = "%s/nobackup/HCAL_Trigger_Study/input/Closure/%s/%s_NOPU_%s_PU/TPETgt%0.1f"%(os.getenv("HOME"), tag, nopuStub, puStub, minTPET)
+    outDir = "%s/nobackup/HCAL_Trigger_Study/input/Closure/%s/%s_NOPU_vs_%s_PU/TPETgt%0.1f"%(os.getenv("HOME"), tag, nopuStub, puStub, minTPET)
     if not os.path.exists(outDir): os.makedirs(outDir)
 
     outFilePath = outDir + "/closure.root"
