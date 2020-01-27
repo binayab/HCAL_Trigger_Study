@@ -6,15 +6,17 @@
 # An example call to this script would be
 # python extraction/makeEventMap.py --pu subpath/to/ootpu/hcalNtuple_0.root --nopu subpath/to/nopu/hcalNtuple_0.root
 
-import ROOT, argparse
+# Here the subpath is assumed to start inside of an HCAL_Trigger_Study folder in the user's area on EOS
+
+import ROOT, argparse, os
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--pu"  , dest="pu"  , help="Subfolder for PU file"  , required=True)
 parser.add_argument("--nopu", dest="nopu", help="Subfolder for NOPU file", required=True)
-
 args = parser.parse_args()
 
-INPUTLOC = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study"
+USER = os.getenv("USER")
+INPUTLOC = "root://cmseos.fnal.gov///store/user/%s/HCAL_Trigger_Study"%(USER)
 
 output = open("eventMap.py", "w")
 

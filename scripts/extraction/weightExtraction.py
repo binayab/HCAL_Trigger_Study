@@ -911,8 +911,9 @@ if __name__ == '__main__':
 
     # Intend for things to work inside sandbox environment
     HOME = os.getenv("HOME")
+    USER = os.getenv("USER")
     SANDBOX = HOME + "/nobackup/HCAL_Trigger_Study"
-    INPUTLOC = "root://cmseos.fnal.gov//store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction"
+    INPUTLOC = "root://cmseos.fnal.gov//store/user/%s/HCAL_Trigger_Study/WeightExtraction"%(USER)
 
     outPath = "%s/plots/Weights/%s/%s"%(SANDBOX,arg.scheme,arg.tag)
     gFromCache = arg.fromCache
