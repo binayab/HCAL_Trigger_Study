@@ -117,6 +117,32 @@ python makeEventMap.py --oot
 
 will generate a python file `eventMap_NoContain_NoDepth_OOT.py` with a map `PU2NOPUMAP`. Copy this map into the `pu2nopuMap.py` file.
 
+### Submitting to LPC Condor
+
+The `analyze_HcalTrig.py` can be used in batch mode when submitting jobs to condor on LPC. The script `submitHcalTrigNtuples.py` handles all the condor job logistics and has several command line options.
+
+```
+--tag       = A unique tag to keep the output organized in its own folder.
+--mean      = Make ntuples using mean version of weights.
+--depth     = Make ntuples using depth averaged version of weights.
+--dataset   = Either a DAS path or EOS path to DIGI-RAW files.
+--updown    = Make ntuples with the up/down variation of the specified weights.
+--versions  = A list of AVE and/or PER_IETA for the specified weights to use.
+--schemes   = A list of PFA2p, PFA1p etc of which scheme to make ntuples with.
+--noSubmit  = Don't submit to condor
+```
+
+Thus, for example, to generate ntuples when reconstructing with the PFA2p, PFA1p schemes and the mean, per-ieta and subdet average weights one could do:
+
+ ```
+ python submitHcalTrigNtuples.py
+     --tag 20200126
+     --mean
+     --dataset /TTbar_14TeV_TuneCP5_Pythia8/Run3Summer19DR-106X_mcRun3_2021_realistic_v3-v2/GEN-SIM-DIGI-RAW
+     --versions PER_IETA AVE
+     --schemes PFA1p PFA2p
+ ```
+
 ## Step 3: Extracting Pulse Filter Weights
 
 Weight extraction is done by the `weightExtraction.py` script in the `extraction` subfolder. The script is run in two successive executions. The first execution does the looping over the HCAL ntuple files and extracts raw weights and writes raw histograms to a cache file. Then the script is run again to process the cache for making final plots and text files. Several commandline options can be specified and are documented below:
