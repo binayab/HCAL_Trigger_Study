@@ -7,19 +7,19 @@ import os, sys, argparse, subprocess, shutil
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--schemes"   , dest="schemes"   , help="Which PFA to use"           , type=str , nargs="+", required=True)
-    parser.add_argument("--process"   , dest="process"   , help="Unique of process (subdir)" , type=str , default="TTbar")
-    parser.add_argument("--versions"  , dest="versions"  , help="List versions of weights"   , type=str , nargs="+", required=True)
-    parser.add_argument("--variations", dest="variations", help="Do up/down variations"      , default=False, action="store_true")
-    parser.add_argument("--depth"     , dest="depth"     , help="Do depth version"           , default=False, action="store_true")
-    parser.add_argument("--mean"      , dest="mean"      , help="Do mean version"            , default=False, action="store_true")
-    parser.add_argument("--noSubmit"  , dest="noSubmit"  , help="Don't run commands"         , default=False, action="store_true")
+    parser.add_argument("--schemes"  , dest="schemes"   , help="Which PFA to use"           , type=str , nargs="+", required=True)
+    parser.add_argument("--process"  , dest="process"   , help="Unique of process (subdir)" , type=str , default="TTbar")
+    parser.add_argument("--versions" , dest="versions"  , help="List versions of weights"   , type=str , nargs="+", required=True)
+    parser.add_argument("--updown"   , dest="updown"    , help="Do up/down variations"      , default=False, action="store_true")
+    parser.add_argument("--depth"    , dest="depth"     , help="Do depth version"           , default=False, action="store_true")
+    parser.add_argument("--mean"     , dest="mean"      , help="Do mean version"            , default=False, action="store_true")
+    parser.add_argument("--noSubmit" , dest="noSubmit"  , help="Don't run commands"         , default=False, action="store_true")
     args = parser.parse_args()
 
     schemes    = args.schemes
     process    = args.process
     versions   = args.versions
-    variations = args.variations
+    updown     = args.updown
     depth      = args.depth
     mean       = args.mean
     noSubmit   = args.noSubmit
@@ -45,7 +45,7 @@ if __name__ == '__main__':
             if not noSubmit: subprocess.call(theCommand.split())
 
             # If we want the up/down variations, make the call for those as well
-            if variations:
+            if updown:
 
                 INPUTDIRUP = INPUTDIR + "_UP"
                 theCommand = "(nohup python %s %s > /dev/null 2>&1 &)"%(SCRIPT, INPUTDIRUP)

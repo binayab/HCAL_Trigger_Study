@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# This is a pretty vanilla condor submission script for submitting jobs to run on DIGI-RAW files
+# and produce HCAL ntuples
+
 import os, sys, argparse, subprocess, shutil
 from time import strftime
 
@@ -25,7 +28,7 @@ def files4Dataset(dataset):
     return returnFiles 
 
 # Write .sh script to be run by Condor
-def generate_job_steerer(workingDir, algo, outputDir, CMSSW_VERSION):
+def generate_job_steerer(workingDir, schemeWeights, outputDir, CMSSW_VERSION):
 
     scriptFile = open("%s/runJob.sh"%(workingDir), "w")
     scriptFile.write("#!/bin/bash\n\n")
@@ -40,8 +43,7 @@ def generate_job_steerer(workingDir, algo, outputDir, CMSSW_VERSION):
     scriptFile.write("cd %s/src\n"%(CMSSW_VERSION))
     scriptFile.write("scramv1 b ProjectRename\n")
     scriptFile.write("eval `scramv1 runtime -sh`\n\n")
-    scriptFile.write("cmsRun analyze_HcalTrig.py %s ${INPUTFILE} ${JOB}\n\n"%(algo))
-    scriptFile.write("xrdcp -f hcalNtuple_${JOB}.root %s 2>&1\n"%(outputDir))
+    scriptFile.write("cmsRun analyze_HcalTrig.py %s ${INPUTFILE} ${JOB}\n\n"%(schemeWeights))
     scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
     scriptFile.write("rm -r %s\n"%(CMSSW_VERSION))
     scriptFile.close()
@@ -74,19 +76,30 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
-    parser.add_argument("--scheme"  , dest="scheme"  , help="Which PFA to use"        , type=str , required=True)
+    parser.add_argument("--schemes" , dest="schemes" , help="Which PFA scheme to use" , type=str , nargs="+", required=True)
+    parser.add_argument("--versions", dest="versions", help="List versions of weights", type=str , nargs="+", required=True)
+    parser.add_argument("--updown"  , dest="updown"  , help="Do up/down variations"   , default=False, action="store_true")
     parser.add_argument("--dataset" , dest="dataset" , help="Unique path to dataset"  , type=str , default="50PU")
+    parser.add_argument("--depth"   , dest="depth"   , help="Do depth version"        , default=False, action="store_true")
+    parser.add_argument("--mean"    , dest="mean"    , help="Do mean version"         , default=False, action="store_true")
     parser.add_argument("--tag"     , dest="tag"     , help="Unique tag"              , type=str , default="NULL")
     args = parser.parse_args()
 
-    scheme   = args.scheme
+    schemes  = args.schemes
+    versions = args.versions
+    mean     = args.mean
+    depth    = args.depth
     tag      = args.tag
     dataset  = args.dataset
     noSubmit = args.noSubmit
    
-    taskDir = strftime("%Y%m%d_%H%M%S")
-    hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(os.getenv("HOME"))
-    
+    variations = [""]
+    if args.updown:
+        variations.append("_UP")
+        variations.append("_DOWN")
+
+    # Figure out the physics process (most likely ttbar) to be used in naming folders
+    # Likewise, get the list of input files to run over
     physProcess = "";  inputFiles = []
     if "/" not in dataset:
         physProcess = dataset
@@ -94,58 +107,76 @@ if __name__ == '__main__':
     else:
         inputFiles = files4Dataset(dataset)
         physProcess = dataset.split("/")[1].split("_")[0]
-    
-    outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s/%s/%s"%(physProcess, tag, scheme)
-    workingDir = "%s/condor/%s_%s_%s_%s"%(hcalDir, physProcess, scheme, tag, taskDir)
-    
-    # After defining the directory to work the job in and output to, make them
-    subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
-    os.makedirs(workingDir)
-    
-    # Send the cmsRun config to the working dir as well as the algo weights
-    shutil.copy2("%s/scripts/analyze_HcalTrig.py"%(hcalDir), workingDir)
-    shutil.copy2("%s/scripts/algo_weights.py"%(hcalDir), workingDir)
-    
-    if outputDir.split("/")[-1] == "":  outputDir  = outputDir[:-1]
-    if workingDir.split("/")[-1] == "": workingDir = workingDir[:-1]
 
-    # Create directories to save logs
-    os.makedirs("%s/logs"%(workingDir))
-    
+    taskDir = strftime("%Y%m%d_%H%M%S")
+    hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(os.getenv("HOME"))
+
     # Get CMSSW environment
     CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
 
-    # Make the .sh to run the show
-    generate_job_steerer(workingDir, scheme, outputDir, CMSSW_VERSION)
+    # Based on command line input, construct all versions of the weights to use
+    # and submit jobs for each version
+    for scheme in schemes:
+        for version in versions:
+            for variation in variations:
 
-    # Make the jdl to hold condor's hand
-    generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION)
+                schemeWeights = scheme
+                if depth: schemeWeights += "_DEPTH_AVE"
 
-    subprocess.call(["chmod", "+x", "%s/runJob.sh"%(workingDir)])
+                schemeWeights += "_%s"%(version)
+        
+                if mean: schemeWeights += "_MEAN"
 
-    # Right here we need to edit a src file in CMSSW and recompile to change the input LUT based on 1TS or 2TS scheme...
-    # After that is done, tar up CMSSW and send to the working directory
-    oneTS = "containmentCorrection1TS;"; twoTS = "pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);"
-    filePath = '%s/src/CalibCalorimetry/HcalTPGAlgos/src/HcaluLUTTPGCoder.cc'%(CMSSW_BASE)
+                schemeWeights += variation
+                
+                outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/hcalNtuples/%s/%s/%s"%(physProcess, tag, schemeWeights)
+                workingDir = "%s/condor/%s_%s_%s_%s"%(hcalDir, physProcess, schemeWeights, tag, taskDir)
+                
+                # After defining the directory to work the job in and output to, make them
+                subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
+                os.makedirs(workingDir)
+                
+                # Send the cmsRun config to the working dir as well as the algo weights
+                shutil.copy2("%s/scripts/analyze_HcalTrig.py"%(hcalDir), workingDir)
+                shutil.copy2("%s/scripts/algo_weights.py"%(hcalDir), workingDir)
+                
+                if outputDir.split("/")[-1] == "":  outputDir  = outputDir[:-1]
+                if workingDir.split("/")[-1] == "": workingDir = workingDir[:-1]
 
-    # Let's be smart and determine if sed has to do a replacement which requires a recompile.
-    recompile = False; replaceStr = ""
-    if "1" not in scheme:
-        p = subprocess.Popen(["grep", oneTS, filePath], stdout=subprocess.PIPE)
-        recompile = bool(p.stdout.readline())
-        replaceStr = 's#%s#%s#g'%(oneTS,twoTS)
-    else:
-        p = subprocess.Popen(["grep", twoTS, filePath], stdout=subprocess.PIPE)
-        recompile = bool(p.stdout.readline())
-        replaceStr = 's#%s#%s#g'%(twoTS,oneTS)
+                # Create directories to save logs
+                os.makedirs("%s/logs"%(workingDir))
 
-    # Only change the file and recompile if necessary
-    if recompile:
-        subprocess.call(['sed', '-i', replaceStr, filePath])
-        subprocess.call(['scram', 'b', '-f', '-j', '8'], cwd=CMSSW_BASE+"/src")
+                # Make the .sh to run the show
+                generate_job_steerer(workingDir, schemeWeights, outputDir, CMSSW_VERSION)
 
-    subprocess.call(["tar", "--exclude-caches-all", "--exclude-vcs", "-zcf", "%s/%s.tar.gz"%(workingDir,CMSSW_VERSION), "-C", "%s/.."%(CMSSW_BASE), CMSSW_VERSION, "--exclude=tmp"])
-    
-    if args.noSubmit: quit()
-    
-    os.system("condor_submit %s/condorSubmit.jdl"%(workingDir))
+                # Make the jdl to hold condor's hand
+                generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION)
+
+                subprocess.call(["chmod", "+x", "%s/runJob.sh"%(workingDir)])
+
+                # Right here we need to edit a src file in CMSSW and recompile to change the input LUT based on 1TS or 2TS scheme...
+                # After that is done, tar up CMSSW and send to the working directory
+                oneTS = "containmentCorrection1TS;"; twoTS = "pulseCorr_->correction(cell, 2, correctionPhaseNS, correctedCharge);"
+                filePath = '%s/src/CalibCalorimetry/HcalTPGAlgos/src/HcaluLUTTPGCoder.cc'%(CMSSW_BASE)
+
+                # Let's be smart and determine if sed has to do a replacement which requires a recompile.
+                recompile = False; replaceStr = ""
+                if "1" not in scheme:
+                    p = subprocess.Popen(["grep", oneTS, filePath], stdout=subprocess.PIPE)
+                    recompile = bool(p.stdout.readline())
+                    replaceStr = 's#%s#%s#g'%(oneTS,twoTS)
+                else:
+                    p = subprocess.Popen(["grep", twoTS, filePath], stdout=subprocess.PIPE)
+                    recompile = bool(p.stdout.readline())
+                    replaceStr = 's#%s#%s#g'%(twoTS,oneTS)
+
+                # Only change the file and recompile if necessary
+                if recompile:
+                    subprocess.call(['sed', '-i', replaceStr, filePath])
+                    subprocess.call(['scram', 'b', '-f', '-j', '8'], cwd=CMSSW_BASE+"/src")
+
+                subprocess.call(["tar", "--exclude-caches-all", "--exclude-vcs", "-zcf", "%s/%s.tar.gz"%(workingDir,CMSSW_VERSION), "-C", "%s/.."%(CMSSW_BASE), CMSSW_VERSION, "--exclude=tmp"])
+                
+                if args.noSubmit: quit()
+                
+                os.system("condor_submit %s/condorSubmit.jdl"%(workingDir))
