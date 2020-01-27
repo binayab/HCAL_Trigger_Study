@@ -135,11 +135,11 @@ The `analyze_HcalTrig.py` can be used in batch mode when submitting jobs to cond
 Thus, for example, to generate ntuples when reconstructing with the PFA2p, PFA1p schemes and the mean, per-ieta and subdet average weights one could do:
 
  ```
- python submitHcalTrigNtuples.py
-     --tag 20200126
-     --mean
-     --dataset /TTbar_14TeV_TuneCP5_Pythia8/Run3Summer19DR-106X_mcRun3_2021_realistic_v3-v2/GEN-SIM-DIGI-RAW
-     --versions PER_IETA AVE
+ python submitHcalTrigNtuples.py \
+     --tag 20200126 \
+     --mean \
+     --dataset /TTbar_14TeV_TuneCP5_Pythia8/Run3Summer19DR-106X_mcRun3_2021_realistic_v3-v2/GEN-SIM-DIGI-RAW \
+     --versions PER_IETA AVE \
      --schemes PFA1p PFA2p
  ```
 
