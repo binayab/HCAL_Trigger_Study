@@ -1,7 +1,7 @@
 # First script directly running on HCAL ntuples files
 
 # An example call could be:
-# python studies/ratioStudyPlotter.py subpath/to/scheme/ntuples
+# python studies/ratioStudyPlotter.py --inputSubPath subpath/to/scheme/ntuples
 
 # The subpath is assumed to start inside HCAL_Trigger_Study/hcalNtuples in the user's EOS area
 
@@ -9,7 +9,6 @@ import sys, os, ROOT, subprocess, argparse
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
-ROOT.gStyle.SetLineWidth(4)
 ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
