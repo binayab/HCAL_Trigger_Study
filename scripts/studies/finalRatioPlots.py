@@ -1,6 +1,9 @@
 # Pull raw histograms from root files and make final output
+
 # An example call would be:
-# python studies/finalRatioPlots.py --tag someTag --pfaY subpath/to/nominal --pfaX1 subpath/to/new
+# python studies/finalRatioPlots.py --pfaY subpath/to/nominal --pfaX1 subpath/to/new
+
+# Here the subpath is assumed to start in nobackup/HCAL_Trigger_Study/input/Ratios/
 
 import sys, os, ROOT, argparse
 
@@ -206,6 +209,8 @@ if __name__ == '__main__':
     parser.add_argument("--pfaX1Err" , dest="pfaX1Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
     parser.add_argument("--pfaX2Err" , dest="pfaX2Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
     args = parser.parse_args()
+
+    tag = args.tag
     
     OPTIONSMAP = {}
     MAPPFAHISTOS = {}
@@ -215,8 +220,6 @@ if __name__ == '__main__':
     if   args.pfaX1 != "NULL": stub = args.pfaX1.split("Ratios/")[-1]
     elif args.pfaX2 != "NULL": stub = args.pfaX2.split("Ratios/")[-1]
     else: quit()
-
-    tag = args.tag
 
     HOME = os.getenv("HOME")
     OUTBASE = "%s/nobackup/HCAL_Trigger_Study/plots/Ratios"%(HOME)
@@ -296,26 +299,26 @@ if __name__ == '__main__':
             skipRes = False
             if len(ietaList) > 1: skipRes = True
 
-            schemeStubX1 = args.pfaX1.split("PFA")[-1].split("/")[0]
-            schemeStubX2 = args.pfaX2.split("PFA")[-1].split("/")[0]
-            schemeStubY  = args.pfaY.split("PFA")[-1].split("/")[0]
+            schemeStubX1 = "PFA" + args.pfaX1.split("PFA")[-1].split("_")[0]
+            schemeStubX2 = "PFA" + args.pfaX2.split("PFA")[-1].split("_")[0]
+            schemeStubY  = "PFA" + args.pfaY.split("PFA")[-1].split("_")[0]
 
             rhBasis = name.split("_")[1][0:2] == "RH"
             etBinLow = "1000" not in str(name.split("_")[1])
             
             pfaX1res = 0; pfaX2res = 0; pfaYres = 0
             if "PFAX1" in MAPPFAHISTOS:
-                t_pfaX1, pfaX1res = draw1DHisto(theStack, "PFAX1", name, "PFA"+schemeStubX1, ROOT.kBlack , 0.75, 0.75, 0.95, 0.90)
+                t_pfaX1, pfaX1res = draw1DHisto(theStack, "PFAX1", name, schemeStubX1, ROOT.kBlack , 0.75, 0.75, 0.95, 0.90)
                 if rhBasis and not skipRes:
                     if etBinLow: pfaX1resHistLow.SetBinContent(pfaX1resHistLow.GetXaxis().FindBin(ieta), pfaX1res)
                     else: pfaX1resHistHigh.SetBinContent(pfaX1resHistHigh.GetXaxis().FindBin(ieta), pfaX1res)
             if "PFAX2" in MAPPFAHISTOS:
-                t_pfaX2, pfaX2res = draw1DHisto(theStack, "PFAX2", name, "PFA"+schemeStubX2, ROOT.kRed, 0.75, 0.39, 0.95, 0.54)
+                t_pfaX2, pfaX2res = draw1DHisto(theStack, "PFAX2", name, schemeStubX2, ROOT.kRed, 0.75, 0.39, 0.95, 0.54)
                 if rhBasis and not skipRes:
                     if etBinLow: pfaX2resHistLow.SetBinContent(pfaX2resHistLow.GetXaxis().FindBin(ieta), pfaX2res)
                     else: pfaX2resHistHigh.SetBinContent(pfaX2resHistHigh.GetXaxis().FindBin(ieta), pfaX2res)
             if "PFAY"  in MAPPFAHISTOS:
-                t_pfaY, pfaYres  = draw1DHisto(theStack, "PFAY" , name, "PFA"+schemeStubY, ROOT.kGray+2   , 0.75, 0.57, 0.95, 0.72)
+                t_pfaY, pfaYres  = draw1DHisto(theStack, "PFAY" , name, schemeStubY, ROOT.kGray+2   , 0.75, 0.57, 0.95, 0.72)
                 if rhBasis and not skipRes:
                     if etBinLow: pfaYresHistLow.SetBinContent(pfaYresHistLow.GetXaxis().FindBin(ieta), pfaYres)
                     else: pfaYresHistHigh.SetBinContent(pfaYresHistHigh.GetXaxis().FindBin(ieta), pfaYres)
@@ -347,38 +350,42 @@ if __name__ == '__main__':
         # Case for low ET bin
         if i == 0: pfaYhist = pfaYresHistLow;  pfaX1hist = pfaX1resHistLow;  pfaX2hist = pfaX2resHistLow
         if i == 1: pfaYhist = pfaYresHistHigh; pfaX1hist = pfaX1resHistHigh; pfaX2hist = pfaX2resHistHigh
-       
+
         canvases[i].cd(); stacks[i].Draw()
-        ROOT.gPad.SetTopMargin(0.02625)
-        ROOT.gPad.SetBottomMargin(0.13375)
+        canvases[i].SetGridy(); canvases[i].SetGridx()
+        ROOT.gPad.SetTopMargin(0.03)
+        ROOT.gPad.SetBottomMargin(0.14)
         ROOT.gPad.SetLeftMargin(0.13)
-        ROOT.gPad.SetRightMargin(0.05)
+        ROOT.gPad.SetRightMargin(0.03)
        
-        iamTextX1 = ROOT.TPaveText(0.3, 0.2, 0.5, 0.25, "trNDC"); iamTextX1.SetFillColor(ROOT.kWhite); iamTextX1.SetTextAlign(11)
+        iamTextX1 = ROOT.TPaveText(0.7, 0.6, 0.8, 0.65, "trNDC"); iamTextX1.SetFillColor(ROOT.kWhite); iamTextX1.SetTextAlign(11)
         if "PFAX1" in MAPPFAHISTOS:
-            prettyHisto(pfaX1resHist, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.85, 1.0,special=False)
+            prettyHisto(pfaX1hist, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.85, 1.0,special=False)
+            pfaX1hist.GetYaxis().SetRangeUser(0, 0.6)
             pfaX1hist.SetLineWidth(3);  pfaX1hist.SetLineColor(ROOT.kBlack)
             pfaX1hist.SetMarkerSize(4); pfaX1hist.SetMarkerColor(ROOT.kBlack); pfaX1hist.SetMarkerStyle(20)
             stacks[i].Add(pfaX1hist)
-            iamTextX1.AddText(args.pfaX1.split("/Ratios/")[-1].split("/")[0])
+            iamTextX1.AddText("PFA" + args.pfaX1.split("PFA")[-1].split("_")[0])
             iamTextX1.SetTextColor(ROOT.kBlack)
 
-        iamTextX2 = ROOT.TPaveText(0.3, 0.28, 0.5, 0.33, "trNDC"); iamTextX2.SetFillColor(ROOT.kWhite); iamTextX2.SetTextAlign(11)
+        iamTextX2 = ROOT.TPaveText(0.7, 0.68, 0.8, 0.73, "trNDC"); iamTextX2.SetFillColor(ROOT.kWhite); iamTextX2.SetTextAlign(11)
         if "PFAX2" in MAPPFAHISTOS:
             prettyHisto(pfaX2hist, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.85, 1.0,special=False)
+            pfaX2hist.GetYaxis().SetRangeUser(0, 0.6)
             pfaX2hist.SetLineWidth(3);  pfaX2hist.SetLineColor(ROOT.kRed)
             pfaX2hist.SetMarkerSize(4); pfaX2hist.SetMarkerColor(ROOT.kRed); pfaX2hist.SetMarkerStyle(20)
             stacks[i].Add(pfaX2hist)
-            iamTextX2.AddText(args.pfaX2.split("/Ratios/")[-1].split("/")[0])
+            iamTextX2.AddText("PFA" + args.pfaX2.split("PFA")[-1].split("_")[0])
             iamTextX2.SetTextColor(ROOT.kRed)
 
-        iamTextY = ROOT.TPaveText(0.3, 0.36, 0.5, 0.41, "trNDC"); iamTextY.SetFillColor(ROOT.kWhite); iamTextY.SetTextAlign(11)
+        iamTextY = ROOT.TPaveText(0.7, 0.76, 0.8, 0.81, "trNDC"); iamTextY.SetFillColor(ROOT.kWhite); iamTextY.SetTextAlign(11)
         if "PFAY"  in MAPPFAHISTOS:
             prettyHisto(pfaYhist, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.85, 1.0,special=False)
+            pfaYhist.GetYaxis().SetRangeUser(0, 0.6)
             pfaYhist.SetLineWidth(3);  pfaYhist.SetLineColor(ROOT.kBlack)
             pfaYhist.SetMarkerSize(4); pfaYhist.SetMarkerColor(ROOT.kGray+2); pfaYhist.SetMarkerStyle(20)
             stacks[i].Add(pfaYhist)
-            iamTextY.AddText(args.pfaY.split("/Ratios/")[-1].split("/")[0])
+            iamTextY.AddText("PFA" + args.pfaY.split("PFA")[-1].split("_")[0])
             iamTextY.SetTextColor(ROOT.kGray+2)
 
         prettyHisto(stacks[i], 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.85, 1.0,special=False)
