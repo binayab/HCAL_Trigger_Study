@@ -525,16 +525,26 @@ class WeightExtractor:
         fitStatError = rebinFitStatErrors[rebin]; meanStatError = rebinMeanStatErrors[rebin]
         fitSystError = theFitSystError;           meanSystError = theMeanSystError
 
-        canvas = ROOT.TCanvas("c_i%d_d%d_w%d_r%d_TS2gt%d"%(ieta,depth,iWeight,rebin,ts2Cut), "c_i%d_d%d_w%d_r%d_TS2gt%d"%(ieta,depth,iWeight,rebin,ts2Cut), 2400, 2400); canvas.cd()
+        canvas = ROOT.TCanvas("c_i%d_d%d_w%d_r%d_TS2gt%d"%(ieta,depth,iWeight,rebin,ts2Cut), "c_i%d_d%d_w%d_r%d_TS2gt%d"%(ieta,depth,iWeight,rebin,ts2Cut), 2600, 2400); canvas.cd()
         canvas.SetGridx()
         canvas.SetGridy()
         ROOT.gPad.SetRightMargin(0.03)
         ROOT.gPad.SetLeftMargin(0.15)
+        ROOT.gPad.SetTopMargin(0.02)
 
         weightHisto.GetXaxis().SetRangeUser(-9,3)
-        theTitle = "|i#eta| = %d"%(ieta)
-        if depth != 0: theTitle += ", Depth = %d"%(depth)
-        weightHisto.SetTitle(theTitle)
+
+        ietaStr = "|i#eta| = %d"%(ieta)
+        x2 = 0.4
+        if depth != 0:
+            ietaStr += ", Depth = %d"%(depth)
+            x2 = 0.5
+
+        ietaText = ROOT.TPaveText(0.2, 0.89, x2, 0.95, "trNDC")
+        ietaText.SetFillColor(ROOT.kWhite); ietaText.SetTextAlign(12); ietaText.SetTextFont(63); ietaText.SetTextSize(140)
+        ietaText.AddText(ietaStr)
+
+        weightHisto.SetTitle("")
         weightHisto.GetXaxis().SetTitle("w_{SOI-%d}"%(3-iWeight))
         weightHisto.GetYaxis().SetTitle("A.U.")
         weightHisto.GetYaxis().SetLabelSize(0.048); weightHisto.GetYaxis().SetTitleSize(0.054); weightHisto.GetYaxis().SetTitleOffset(1.45)
@@ -551,7 +561,7 @@ class WeightExtractor:
 
         someText.AddText("Peak = %3.2f_{ #pm %3.2f (stat.)}^{ #pm %3.2f (syst.)}"%(fitWeight,fitStatError,fitSystError))
         someText.AddText("Mean = %3.2f_{ #pm %3.2f (stat.)}^{ #pm %3.2f (syst.)}"%(meanWeight,meanStatError,meanSystError))
-        someText.AddText("#chi^{2} / DOF = %3.2f / %d"%(histoFit.GetChisquare(), histoFit.GetNDF()))
+        someText.AddText("#chi^{2} / ndf = %3.2f / %d"%(histoFit.GetChisquare(), histoFit.GetNDF()))
         someText.AddText("Entries = %d"%(weightHisto.GetEntries()))
         someText.SetTextAlign(31)
         someText.SetTextSize(0.035)
@@ -560,6 +570,7 @@ class WeightExtractor:
         weightHisto.Draw("HIST")
         histoFit.Draw("SAME")
         someText.Draw("SAME")
+        ietaText.Draw("SAME")
     
         outPath = "%s/Fits/ieta%d/depth%d/SOI-%d/TS2gt%d"%(self.outPath,ieta,depth,3-iWeight,ts2Cut)
         if not os.path.exists(outPath): os.makedirs(outPath)
