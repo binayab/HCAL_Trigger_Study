@@ -38,8 +38,8 @@ def prettyProfile(histo, name, color, markerStyle, pfa):
 
     p = histo.ProfileX("p_%s_%s"%(pfa,name), firstyBin, -1, option)
     p.SetMarkerStyle(markerStyle)
-    p.SetMarkerSize(2)
-    p.SetLineWidth(2)
+    p.SetMarkerSize(3)
+    p.SetLineWidth(3)
     p.SetMarkerColor(color)
     p.SetLineColor(color)
     p.Sumw2()
@@ -68,7 +68,7 @@ def fillMap(pfaKey, inRootDir):
            if name in MAPPFAHISTOS[pfaKey].keys(): MAPPFAHISTOS[pfaKey][name].Add(histo)
            else: MAPPFAHISTOS[pfaKey][name] = histo
 
-def draw2DHistoAndProfile(canvas, keyName, histoName, zMax, color, markerStyle, drewRatio):
+def draw2DHistoAndProfile(canvas, keyName, histoName, zMax, color, markerStyle, line, drewRatio):
 
     canvas.cd()
 
@@ -95,7 +95,9 @@ def draw2DHistoAndProfile(canvas, keyName, histoName, zMax, color, markerStyle, 
         theHisto.GetZaxis().SetRangeUser(1,zMax)
         theHisto.Draw("COLZ")
         drewRatio = True
-
+    
+    # Sneak the line in so the profile is draw on top
+    line.Draw("SAME")
     pPFAX.Draw("EP SAME")
 
     return drewRatio
@@ -144,7 +146,7 @@ if __name__ == '__main__':
             c1 = 0; line = 0
             if "ETCorr" in name:
 
-                c1 = ROOT.TCanvas("%s"%(name), "%s"%(name), 1500, 1440); c1.cd(); c1.SetLogz()
+                c1 = ROOT.TCanvas("%s"%(name), "%s"%(name), 1600, 1440); c1.cd(); c1.SetLogz()
 
                 ROOT.gPad.SetTopMargin(0.026)
                 ROOT.gPad.SetBottomMargin(0.13)
@@ -167,14 +169,24 @@ if __name__ == '__main__':
 
                 line = ROOT.TLine(-28, 1, 28, 1) 
 
-            line.SetLineWidth(4)
+            line.SetLineWidth(7)
             line.SetLineColor(ROOT.kBlack)
-            line.SetLineStyle(2)
+            line.SetLineStyle(7)
 
             drewRatio = False
-            if "PFAX1" in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAX1", name, zMax, ROOT.kBlack, 20, drewRatio)
-            if "PFAX2" in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAX2", name, zMax, ROOT.kRed  , 20, drewRatio)
-            if "PFAY"  in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAY" , name, zMax, ROOT.kBlack, 4,  drewRatio)
-    
-            line.Draw("SAME")
+            if "PFAX1" in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAX1", name, zMax, ROOT.kBlack  , 20, line, drewRatio)
+            if "PFAX2" in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAX2", name, zMax, ROOT.kPink+10, 20, line, drewRatio)
+            if "PFAY"  in MAPPFAHISTOS: drewRatio = draw2DHistoAndProfile(c1, "PFAY" , name, zMax, ROOT.kBlack  , 4,  line, drewRatio)
+
+            ietaList = name.split("ieta")[-1].split("to")
+            ietaStr = ""
+            if len(ietaList) > 1: ietaStr = "%s to %s"%(ietaList[0],ietaList[1])
+            else:                 ietaStr = "%s"%(ietaList[0])
+
+            ietaText = ROOT.TPaveText(0.20, 0.86, 0.40, 0.95, "trNDC")
+            ietaText.SetFillColor(ROOT.kWhite); ietaText.SetTextAlign(11); ietaText.SetTextFont(63); ietaText.SetTextSize(90)
+            ietaText.AddText("|i#eta| = %s"%(ietaStr))
+
+            ietaText.Draw("SAME")
+
             c1.SaveAs("%s/%s.pdf"%(outpath,name))
