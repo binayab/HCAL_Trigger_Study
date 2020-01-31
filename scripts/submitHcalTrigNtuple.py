@@ -78,7 +78,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
     parser.add_argument("--schemes" , dest="schemes" , help="Which PFA scheme to use" , type=str , nargs="+", required=True)
-    parser.add_argument("--versions", dest="versions", help="List versions of weights", type=str , nargs="+", required=True)
+    parser.add_argument("--versions", dest="versions", help="List versions of weights", type=str , nargs="+", default=[""])
     parser.add_argument("--updown"  , dest="updown"  , help="Do up/down variations"   , default=False, action="store_true")
     parser.add_argument("--dataset" , dest="dataset" , help="Unique path to dataset"  , type=str , default="50PU")
     parser.add_argument("--depth"   , dest="depth"   , help="Do depth version"        , default=False, action="store_true")
@@ -121,11 +121,11 @@ if __name__ == '__main__':
                 schemeWeights = scheme
                 if depth: schemeWeights += "_DEPTH_AVE"
 
-                schemeWeights += "_%s"%(version)
+                if version: schemeWeights += "_%s"%(version)
         
                 if mean: schemeWeights += "_MEAN"
 
-                schemeWeights += variation
+                if variation: schemeWeights += variation
                 
                 outputDir = "root://cmseos.fnal.gov///store/user/%s/HCAL_Trigger_Study/hcalNtuples/%s/%s"%(USER, tag, schemeWeights)
                 workingDir = "%s/condor/%s_%s_%s"%(hcalDir, schemeWeights, tag, taskDir)
