@@ -8,8 +8,8 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--schemes"  , dest="schemes"   , help="Which PFA to use"           , type=str , nargs="+", required=True)
-    parser.add_argument("--process"  , dest="process"   , help="Unique of process (subdir)" , type=str , default="TTbar")
-    parser.add_argument("--versions" , dest="versions"  , help="List versions of weights"   , type=str , nargs="+", required=True)
+    parser.add_argument("--inputPath", dest="inputPath" , help="Subpath to input files"     , type=str , required=True)
+    parser.add_argument("--versions" , dest="versions"  , help="List versions of weights"   , type=str , nargs="+", default=[""])
     parser.add_argument("--updown"   , dest="updown"    , help="Do up/down variations"      , default=False, action="store_true")
     parser.add_argument("--depth"    , dest="depth"     , help="Do depth version"           , default=False, action="store_true")
     parser.add_argument("--mean"     , dest="mean"      , help="Do mean version"            , default=False, action="store_true")
@@ -17,7 +17,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     schemes    = args.schemes
-    process    = args.process
+    inputStub  = args.inputPath
     versions   = args.versions
     updown     = args.updown
     depth      = args.depth
@@ -28,31 +28,40 @@ if __name__ == '__main__':
 
     SCRIPT = "%s/nobackup/HCAL_Trigger_Study/scripts/studies/ratioStudyPlotter.py"%(HOME)
 
+    # Loop over the schemes (PFA2p, PFA1p, etc.)
+    # and for each scheme construct the different
+    # versions (PER_IETA, AVE, MEAN)
     for scheme in schemes:
         for version in versions:
             
+            # Begin constructing the unique weights tag
             weights = scheme
-            if depth: weights += "_DEPTH_AVE"
 
-            weights += "_%s"%(version)
-        
+            if depth: weights += "_DEPTH_AVE"
+            if version: weights += "_%s"%(version)
             if mean: weights += "_MEAN"
 
-            INPUTDIR = "%s/%s"%(process, weights)
+            INPUTDIR = "%s/%s"%(inputStub, weights)
 
-            theCommand = "(nohup python %s %s > /dev/null 2>&1 &)"%(SCRIPT, INPUTDIR)
+            theCommand = "python %s --inputSubPath %s"%(SCRIPT, INPUTDIR)
             print "Executing command: '%s'"%(theCommand)
-            if not noSubmit: subprocess.call(theCommand.split())
+
+            FOUT = open("%s.txt"%(weights), 'w')
+            if not noSubmit: subprocess.Popen(theCommand.split(), stdout=FOUT, stderr=subprocess.STDOUT)
 
             # If we want the up/down variations, make the call for those as well
             if updown:
 
                 INPUTDIRUP = INPUTDIR + "_UP"
-                theCommand = "(nohup python %s %s > /dev/null 2>&1 &)"%(SCRIPT, INPUTDIRUP)
+                theCommand = "python %s --inputSubPath %s"%(SCRIPT, INPUTDIRUP)
                 print "Executing command: '%s'"%(theCommand)
-                if not noSubmit: subprocess.call(theCommand.split())
+
+                FOUTUP = open("%s_UP.txt"%(weights), 'w')
+                if not noSubmit: subprocess.Popen(theCommand.split(), stdout=FOUTUP, stderr=subprocess.STDOUT)
 
                 INPUTDIRDOWN = INPUTDIR + "_DOWN"
-                theCommand = "(nohup python %s %s > /dev/null 2>&1 &)"%(SCRIPT, INPUTDIRDOWN)
+                theCommand = "python %s --inputSubPath %s"%(SCRIPT, INPUTDIRDOWN)
                 print "Executing command: '%s'"%(theCommand)
-                if not noSubmit: subprocess.call(theCommand.split())
+
+                if not noSubmit: subprocess.Popen(theCommand.split(), stdout=FOUTDOWN, stderr=subprocess.STDOUT)
+                FOUTDOWN = open("%s_DOWN.txt"%(weights), 'w')
