@@ -14,8 +14,12 @@ PFA       = str(sys.argv[2])
 inputFile = str(sys.argv[3])
 job       = str(sys.argv[4])
 
+isData = "DATA" in inputFile
+
 # Intialize the process based on the era
-process = cms.Process('RAW2DIGI', eras.Run3)
+process = 0
+if isData: process = cms.Process('RAW2DIGI', eras.Run2_2018)
+else:      process = cms.Process('RAW2DIGI', eras.Run3)
 
 # Import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -55,64 +59,98 @@ process.maxEvents = cms.untracked.PSet(
 )
 
 # Input source, here a few different pre-defined sets of files
-if "OOT" in inputFile:
-    if "TTbar" in inputFile:
-        process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
-        process.source = cms.Source("PoolSource",
-            fileNames = cms.untracked.vstring(
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-OOT_1.root',
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-OOT_2.root',
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-OOT_3.root',
-        
-            ),
-            secondaryFileNames = cms.untracked.vstring(),
-        )
-    elif "NuGun" in inputFile:
-        process.source = cms.Source("PoolSource",
-            fileNames = cms.untracked.vstring(
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3_50PU/10000/NuGun-DIGI-RAW-50PU_OOT.root',
-            ),
-            secondaryFileNames = cms.untracked.vstring(),
-        )
+if "DATA" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_dataRun2_v26', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/DC207766-1C12-DC44-B679-89EB77C5EE2A.root', # LS 44 of Run 324021        
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/0B051695-EFBF-3F47-874D-92DE9278FA75.root', # LS 45 of Run 324021
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/9318ED7A-17EB-6644-9DE8-1FF212666945.root', # LS 49 of Run 324021
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
 
-elif "NOPU" in inputFile:
-    if "TTbar" in inputFile:
-        process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
-        process.source = cms.Source("PoolSource",
-            fileNames = cms.untracked.vstring(
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-NOPU.root',
-            ),
-            secondaryFileNames = cms.untracked.vstring(),
-        )
+elif "TTbar_OOT" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-OOT_1.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-OOT_2.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-OOT_3.root',
+    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
 
-elif "0PU" in inputFile:
-    if "TTbar" in inputFile:
-        process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
-        process.source = cms.Source("PoolSource",
-            fileNames = cms.untracked.vstring(
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-0PU123.root',
-            ),
-            secondaryFileNames = cms.untracked.vstring(),
-        )
+elif "NuGun_OOT" in inputFile:
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3_50PU/10000/NuGun-DIGI-RAW-50PU_OOT.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
 
-elif "50PU" in inputFile: 
-    if "TTbar" in inputFile:
-        process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
-        process.source = cms.Source("PoolSource",
-            fileNames = cms.untracked.vstring(
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_1.root',
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_2.root',
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_3.root',
-            ),
-            secondaryFileNames = cms.untracked.vstring(),
-        )
-    elif "NuGun" in inputFile:
-        process.source = cms.Source("PoolSource",
-            fileNames = cms.untracked.vstring(
-                'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3_50PU/10000/NuGun-DIGI-RAW-50PU.root',
-            ),
-            secondaryFileNames = cms.untracked.vstring(),
-        )
+elif "TTbar_NOPU" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-NOPU.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_0PU" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-0PU123.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_50PU" in inputFile: 
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_1.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_2.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_3.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+elif "NuGun_50PU" in inputFile:
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3_50PU/10000/NuGun-DIGI-RAW-50PU.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TimeSlew_NOPU" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-NOPU123-FixedSlew.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+elif "TimeSlew_PU" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_1.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_901.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_1801.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_2701.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_3601.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_4501.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_5401.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_6301.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_7201.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_8101.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
 
 else:
     process.source = cms.Source("PoolSource",
@@ -132,10 +170,7 @@ process.configurationMetadata = cms.untracked.PSet(
 # Make an analysis path
 process.startjob = cms.Path(                                                   
   process.hcalDigis*                                                                        
-  process.hfprereco*
-  process.hfreco*
   process.hbheprereco
-
 )
 
 # Path and EndPath definitions
