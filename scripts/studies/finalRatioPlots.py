@@ -192,15 +192,18 @@ def draw1DHisto(theStack, keyName, histoName, algoName, color, lineStyle, x1, y1
 
     theHisto = MAPPFAHISTOS[keyName][histoName]
 
+    mean = theHisto.GetMean()
+    stddev = theHisto.GetStdDev()
+
     prettyHisto(theHisto, 0.042, 0.042, 0.042, 0.052, 0.052, 0.052, 1.06, 1.2, 1.0, color, lineStyle)
     theStack.Add(theHisto)
     theStack.GetXaxis().SetTitle(theHisto.GetXaxis().GetTitle())
     theStack.GetYaxis().SetTitle(theHisto.GetYaxis().GetTitle())
 
     someTextPFAX = ROOT.TPaveText(x1, y1, x2, y2, "trNDC")
-    prettyText(someTextPFAX, color, algoName, theHisto.GetMean(), theHisto.GetStdDev())
+    prettyText(someTextPFAX, color, algoName, mean, stddev)
 
-    return someTextPFAX, theHisto.GetStdDev()
+    return someTextPFAX, stddev, mean
 
 if __name__ == '__main__':
 
@@ -244,17 +247,17 @@ if __name__ == '__main__':
     outpath = "%s/%s/%s"%(OUTBASE,stub,tag)
     if not os.path.exists(outpath): os.makedirs(outpath)
 
-    pfaX1resHistLow = ROOT.TH1F("pfaX1ResLow", ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
-    pfaX2resHistLow = ROOT.TH1F("pfaX2ResLow", ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
-    pfaYresHistLow  = ROOT.TH1F("pfaYResLow",  ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
+    pfaX1resHistLow = ROOT.TH1F("pfaX1ResLow", ";|i#eta|;#sigma/#mu (online / offline)", 28, 0.5, 28.5)
+    pfaX2resHistLow = ROOT.TH1F("pfaX2ResLow", ";|i#eta|;#sigma/#mu (online / offline)", 28, 0.5, 28.5)
+    pfaYresHistLow  = ROOT.TH1F("pfaYResLow",  ";|i#eta|;#sigma/#mu (online / offline)", 28, 0.5, 28.5)
 
-    pfaX1resHistHigh = ROOT.TH1F("pfaX1ResHigh", ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
-    pfaX2resHistHigh = ROOT.TH1F("pfaX2ResHigh", ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
-    pfaYresHistHigh  = ROOT.TH1F("pfaYResHigh",  ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
+    pfaX1resHistHigh = ROOT.TH1F("pfaX1ResHigh", ";|i#eta|;#sigma/#mu (online / offline)", 28, 0.5, 28.5)
+    pfaX2resHistHigh = ROOT.TH1F("pfaX2ResHigh", ";|i#eta|;#sigma/#mu (online / offline)", 28, 0.5, 28.5)
+    pfaYresHistHigh  = ROOT.TH1F("pfaYResHigh",  ";|i#eta|;#sigma/#mu (online / offline)", 28, 0.5, 28.5)
 
     pfaResHistDummy  = ROOT.TH1F("pfaResHistDummy", ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
     prettyHisto(pfaResHistDummy, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.85, 1.0,special=False)
-    pfaResHistDummy.GetYaxis().SetRangeUser(0.0, 0.6)
+    pfaResHistDummy.GetYaxis().SetRangeUser(0.0, 0.7)
 
     # Save the final histograms
     mapNameToHisto = MAPPFAHISTOS.values()[0]
@@ -266,9 +269,7 @@ if __name__ == '__main__':
 
             ROOT.gStyle.SetErrorX(0.0)
 
-            zMax = 0
-            if "RHET" in name: zMax = 8e4
-            else:              zMax = 5e3
+            zMax = 8e4
             
             c1 = ROOT.TCanvas("%s"%(name), "%s"%(name), 2400, 1440); c1.cd(); c1.SetLogz()
 
@@ -320,17 +321,17 @@ if __name__ == '__main__':
             
             pfaX1res = 0; pfaX2res = 0; pfaYres = 0
             if "PFAX1" in MAPPFAHISTOS:
-                t_pfaX1, pfaX1res = draw1DHisto(theStack, "PFAX1", name, schemeStubX1, ROOT.kBlack, 1, 0.75, 0.52, 0.92, 0.67)
+                t_pfaX1, pfaX1res, pfaX1mean = draw1DHisto(theStack, "PFAX1", name, schemeStubX1, ROOT.kBlack, 1, 0.75, 0.52, 0.92, 0.67)
                 if not skipRes:
                     if   etBinLow:  pfaX1resHistLow.SetBinContent(pfaX1resHistLow.GetXaxis().FindBin(ieta), pfaX1res)
                     elif etBinHigh: pfaX1resHistHigh.SetBinContent(pfaX1resHistHigh.GetXaxis().FindBin(ieta), pfaX1res)
             if "PFAX2" in MAPPFAHISTOS:
-                t_pfaX2, pfaX2res = draw1DHisto(theStack, "PFAX2", name, schemeStubX2, ROOT.kRed, 1, 0.75, 0.34, 0.92, 0.49)
+                t_pfaX2, pfaX2res, pfaX2mean = draw1DHisto(theStack, "PFAX2", name, schemeStubX2, ROOT.kRed, 1, 0.75, 0.34, 0.92, 0.49)
                 if not skipRes:
                     if   etBinLow:  pfaX2resHistLow.SetBinContent(pfaX2resHistLow.GetXaxis().FindBin(ieta), pfaX2res)
                     elif etBinHigh: pfaX2resHistHigh.SetBinContent(pfaX2resHistHigh.GetXaxis().FindBin(ieta), pfaX2res)
             if "PFAY"  in MAPPFAHISTOS:
-                t_pfaY, pfaYres  = draw1DHisto(theStack, "PFAY" , name, schemeStubY, ROOT.kGray+2, 1, 0.75, 0.70, 0.92, 0.85)
+                t_pfaY, pfaYres, pfaYmean  = draw1DHisto(theStack, "PFAY" , name, schemeStubY, ROOT.kGray+2, 1, 0.75, 0.70, 0.92, 0.85)
                 if not skipRes:
                     if    etBinLow: pfaYresHistLow.SetBinContent(pfaYresHistLow.GetXaxis().FindBin(ieta), pfaYres)
                     elif etBinHigh: pfaYresHistHigh.SetBinContent(pfaYresHistHigh.GetXaxis().FindBin(ieta), pfaYres)
@@ -374,7 +375,7 @@ if __name__ == '__main__':
        
         pfaResHistDummy.Draw("")
 
-        iamTextX1 = ROOT.TPaveText(0.7, 0.7, 0.8, 0.75, "trNDC"); iamTextX1.SetFillColor(ROOT.kWhite); iamTextX1.SetTextAlign(11); iamTextX1.SetTextFont(63); iamTextX1.SetTextSize(90)
+        iamTextX1 = ROOT.TPaveText(0.7, 0.69, 0.8, 0.75, "trNDC"); iamTextX1.SetFillColor(ROOT.kWhite); iamTextX1.SetTextAlign(12); iamTextX1.SetTextFont(63); iamTextX1.SetTextSize(90)
         if "PFAX1" in MAPPFAHISTOS:
             pfaX1graph.SetLineWidth(3);  pfaX1graph.SetLineColor(ROOT.kBlack)
             pfaX1graph.SetMarkerSize(4); pfaX1graph.SetMarkerColor(ROOT.kBlack); pfaX1graph.SetMarkerStyle(20)
@@ -384,7 +385,7 @@ if __name__ == '__main__':
             pfaX1graph.Draw("EP SAME")
             iamTextX1.Draw("SAME")
 
-        iamTextX2 = ROOT.TPaveText(0.7, 0.78, 0.8, 0.83, "trNDC"); iamTextX2.SetFillColor(ROOT.kWhite); iamTextX2.SetTextAlign(11); iamTextX2.SetTextFont(63); iamTextX2.SetTextSize(90)
+        iamTextX2 = ROOT.TPaveText(0.7, 0.78, 0.8, 0.84, "trNDC"); iamTextX2.SetFillColor(ROOT.kWhite); iamTextX2.SetTextAlign(12); iamTextX2.SetTextFont(63); iamTextX2.SetTextSize(90)
         if "PFAX2" in MAPPFAHISTOS:
             pfaX2graph.SetLineWidth(3);  pfaX2graph.SetLineColor(ROOT.kRed)
             pfaX2graph.SetMarkerSize(4); pfaX2graph.SetMarkerColor(ROOT.kRed); pfaX2graph.SetMarkerStyle(20)
@@ -394,7 +395,7 @@ if __name__ == '__main__':
             pfaX2graph.Draw("EP SAME")
             iamTextX2.Draw("SAME")
 
-        iamTextY = ROOT.TPaveText(0.7, 0.86, 0.8, 0.91, "trNDC"); iamTextY.SetFillColor(ROOT.kWhite); iamTextY.SetTextAlign(11); iamTextY.SetTextFont(63); iamTextY.SetTextSize(90)
+        iamTextY = ROOT.TPaveText(0.7, 0.87, 0.8, 0.93, "trNDC"); iamTextY.SetFillColor(ROOT.kWhite); iamTextY.SetTextAlign(12); iamTextY.SetTextFont(63); iamTextY.SetTextSize(90)
         if "PFAY"  in MAPPFAHISTOS:
             pfaYgraph.SetLineWidth(3);  pfaYgraph.SetLineColor(ROOT.kGray+2)
             pfaYgraph.SetMarkerSize(4); pfaYgraph.SetMarkerColor(ROOT.kGray+2); pfaYgraph.SetMarkerStyle(20)
