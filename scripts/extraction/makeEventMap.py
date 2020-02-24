@@ -24,7 +24,7 @@ if args.contain: containStr = "Contain"
 depthStr = "NoDepth"
 if args.depth: depthStr = "Depth"
 
-INPUTLOC = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/WeightExtraction"
+INPUTLOC = "/hdfs/cms/user/bajga003/"
 FULLPATH = "%s/TTbar/%s/%s"%(INPUTLOC,containStr,depthStr)
 
 output = open("eventMap_%s_%s_%s.py"%(containStr,depthStr,puStr), "w")
