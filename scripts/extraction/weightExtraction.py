@@ -8,8 +8,8 @@ ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
 ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.gStyle.SetPaintTextFormat("3.2f")
-ROOT.gStyle.SetErrorX(0)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning
+ROOT.gStyle.SetEndErrorSize(0)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
 
@@ -445,7 +445,7 @@ class WeightExtractor:
                         ROOT.gPad.SetRightMargin(0.13)
                         ROOT.gPad.SetLeftMargin(0.12)
 
-                        averagePulse = histo.ProfileX("prof_i%d_d%d_TSgt%d_%s"%(ieta,depth,ts2Cut,category),1,-1) 
+                        averagePulse = histo.ProfileX("prof_i%d_d%d_TSgt%d_%s"%(ieta,depth,ts2Cut,category),1,-1)
 
                         histo.SetContour(255)
                         theTitle = "|i#eta| = %d"%(ieta)
@@ -462,11 +462,11 @@ class WeightExtractor:
                         histo.Draw("COLZ")
 
                         averagePulse.SetLineWidth(5)
-                        averagePulse.SetMarkerSize(4)
+                        averagePulse.SetMarkerSize(5)
                         averagePulse.SetMarkerStyle(20)
                         averagePulse.SetMarkerColor(ROOT.kBlack)
                         averagePulse.SetLineColor(ROOT.kBlack)
-                        averagePulse.Draw("SAME")
+                        averagePulse.Draw("EP SAME")
     
                         canvas.SetLogz()
 
