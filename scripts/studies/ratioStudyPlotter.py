@@ -1,9 +1,9 @@
-# First script directly running on HCAL ntuples files
+# First-step script directly running on HCAL ntuples files
 
 # An example call could be:
 # python studies/ratioStudyPlotter.py --inputSubPath subpath/to/scheme/ntuples
 
-# The subpath is assumed to start inside HCAL_Trigger_Study/hcalNtuples in the user's EOS area
+# The subpath is assumed to start inside HCAL_Trigger_Study/hcalNtuples path in the user's EOS area
 
 import sys, os, ROOT, subprocess, argparse
 
@@ -13,9 +13,9 @@ ROOT.gStyle.SetFrameLineWidth(4)
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
 
-# From the events do a draw to make a 3D histo with RH or TP ET on z, TP/RH ratio on y and ieta on x
+# From the events TChain, do a TTree draw to make a 3D histo with RH or TP ET on z, a user-specified variable on the y and ieta on x
 # Regardless if RH or TP ET on z, always impose TP ET > 0.5
-def ratioTPVsRH_Eta_ET(evtsTree, basis = "TP", bx = "(1==1)"):
+def make3Dhisto(evtsTree, variable = "TP_energy/RH_energy", basis = "TP", pu = "(1==1)"):
 
     etBranch = ""; tpMinSelection = "TP_energy>0.5"
     if basis == "TP": etBranch = "TP_energy"
@@ -23,39 +23,19 @@ def ratioTPVsRH_Eta_ET(evtsTree, basis = "TP", bx = "(1==1)"):
 
     h3 = ROOT.TH3F("h3_%sET"%(basis), "h3_%sET"%(basis), 57, -28.5, 28.5, 720, 0., 20.0, 257, -0.25, 128.25)
 
-    evtsTree.Draw("%s:TP_energy/RH_energy:ieta>>h3_%sET"%(etBranch,basis), "tp_soi!=255 && %s && RH_energy>0. && %s"%(tpMinSelection,bx))
+    evtsTree.Draw("%s:%s:ieta>>h3_%sET"%(etBranch,variable,basis), "tp_soi!=255 && %s && RH_energy>0. && %s"%(tpMinSelection,pu))
 
     h3 = ROOT.gDirectory.Get("h3_%sET"%(basis))
 
     return h3
 
-# Make a TP/RH vs ieta 2D plot
-def ratioTPVsRH_Eta(outfile, histo, basis, etRange = []):
+# 1D histo of user variable for range of TP ET and ieta
+def make1D_Var(outfile, package, etRange = [], ietaRange = []):
 
     outfile.cd()
 
-    htemp = histo.Clone()
-
-    h2 = 0
-    if   len(etRange) == 0: htemp.GetZaxis().SetRange(1, htemp.GetZaxis().GetNbins())
-    elif len(etRange) == 1: htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(etRange[0]),htemp.GetZaxis().FindBin(etRange[0]))
-    elif len(etRange) == 2: htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(etRange[0])+1,htemp.GetZaxis().FindBin(etRange[1]))
-
-    htemp.GetZaxis().SetBit(ROOT.TAxis.kAxisRange)
-    h2 = htemp.Project3D("yx")
-
-    h2.SetTitle("")
-    h2.GetXaxis().SetTitle("i#eta")
-    h2.GetYaxis().SetTitle("E_{T,TP} / E_{T,RH}")
-
-    if   len(etRange) == 0: h2.Write("TPRH_vs_Eta")
-    elif len(etRange) == 1: h2.Write("TPRH_vs_Eta_%sET%0.1f"%(basis,etRange[0]))
-    elif len(etRange) == 2: h2.Write("TPRH_vs_Eta_%sET%0.1fto%0.1f"%(basis,etRange[0],etRange[1]))
-
-# 1D histo of TP/RH values for range of TP ET and ieta
-def ratioTPVsRH(outfile, histo, basis, etRange = [], ietaRange = []):
-
-    outfile.cd()
+    histo = package[0]; basis = package[1]; tag = package[2]
+    var = package[3]; title = package[4]
 
     htemp = histo.Clone()
 
@@ -87,18 +67,47 @@ def ratioTPVsRH(outfile, histo, basis, etRange = [], ietaRange = []):
         ietaStr = "ieta%dto%d"%(ietaRange[0],ietaRange[1])
 
     h.SetTitle("")
-    h.GetXaxis().SetTitle("E_{T,TP} / E_{T,RH}")
+    h.GetXaxis().SetTitle(title)
     h.GetYaxis().SetTitle("A.U.")
 
-    h.Write("TPRH_%s_%s"%(etStr,ietaStr))
+    h.Write("%s_%s_%s%s"%(var,etStr,ietaStr,tag))
 
-# 2D plot of TP/RH as a function of RH or TP ET with a selection on ieta
-def ratioTPVsRH_ET(outfile, histo, basis, ietaRange = [1,28]):
+# Make a user variable vs ieta 2D plot
+def make2D_Var_vs_Eta(outfile, package, etRange = []):
 
     outfile.cd()
 
-    htempp = histo.Clone(histo.GetName()+"_pos")
-    htempn = histo.Clone(histo.GetName()+"_neg")
+    histo = package[0]; basis = package[1]; tag = package[2]
+    var = package[3]; title = package[4]
+
+    htemp = histo.Clone()
+
+    h2 = 0
+    if   len(etRange) == 0: htemp.GetZaxis().SetRange(1, htemp.GetZaxis().GetNbins())
+    elif len(etRange) == 1: htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(etRange[0]),htemp.GetZaxis().FindBin(etRange[0]))
+    elif len(etRange) == 2: htemp.GetZaxis().SetRange(htemp.GetZaxis().FindBin(etRange[0])+1,htemp.GetZaxis().FindBin(etRange[1]))
+
+    htemp.GetZaxis().SetBit(ROOT.TAxis.kAxisRange)
+    h2 = htemp.Project3D("yx")
+
+    h2.SetTitle("")
+    h2.GetXaxis().SetTitle("i#eta")
+    h2.GetYaxis().SetTitle(title)
+
+    if   len(etRange) == 0: h2.Write("%s_vs_Eta%s"%(var,tag))
+    elif len(etRange) == 1: h2.Write("%s_vs_Eta_%sET%0.1f%s"%(var,basis,etRange[0],tag))
+    elif len(etRange) == 2: h2.Write("%s_vs_Eta_%sET%0.1fto%0.1f%s"%(var,basis,etRange[0],etRange[1],tag))
+
+
+# 2D plot of user variable as a function of RH or TP ET with a selection on ieta
+def make2D_Var_vs_ET(outfile, package, ietaRange = [1,28]):
+
+    outfile.cd()
+
+    histo = package[0]; basis = package[1]; tag = package[2]
+    var = package[3]; title = package[4]
+
+    htempp = histo.Clone(histo.GetName()+"_pos"); htempn = histo.Clone(histo.GetName()+"_neg")
 
     h2pos = 0; h2neg = 0; ietaStr = ""
     if len(ietaRange) == 1:
@@ -112,19 +121,17 @@ def ratioTPVsRH_ET(outfile, histo, basis, ietaRange = [1,28]):
 
         ietaStr = "_ieta%dto%d"%(ietaRange[0],ietaRange[1])
 
-    htempp.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
-    htempn.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
+    htempp.GetXaxis().SetBit(ROOT.TAxis.kAxisRange); htempn.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
 
-    h2pos = htempp.Project3D("yz")
-    h2neg = htempn.Project3D("yz")
+    h2pos = htempp.Project3D("yz"); h2neg = htempn.Project3D("yz")
 
     h2pos.Add(h2neg)
 
     h2pos.SetTitle("")
-    h2pos.GetYaxis().SetTitle("E_{T,TP} / E_{T,RH}")
+    h2pos.GetYaxis().SetTitle(title)
     h2pos.GetXaxis().SetTitle("E_{T,%s} [GeV]"%(basis))
 
-    h2pos.Write("TPRH_%sET%s"%(basis,ietaStr))
+    h2pos.Write("%s_%sET%s%s"%(var,basis,ietaStr,tag))
 
 def analysis(PFAXFileDir, outDir):
 
@@ -147,39 +154,38 @@ def analysis(PFAXFileDir, outDir):
     # Add only honest root files to TChain
     for item in allItems:
         
-        if ".root" not in item: continue
-        if "ratio" in item:     continue
+        if ".root" not in item or "ratio" in item: continue
     
         if onEOS: cPFAX.AddFile("root://cmseos.fnal.gov/"+item)
         else:     cPFAX.AddFile(item)
 
-    TPETvRatiovEta_TP = ratioTPVsRH_Eta_ET(cPFAX,"TP"); TPETvRatiovEta_TP.SetDirectory(0)
-    TPETvRatiovEta_RH = ratioTPVsRH_Eta_ET(cPFAX,"RH"); TPETvRatiovEta_RH.SetDirectory(0)
+    rawHistoPackages = []
+    histo3D_TP        = make3Dhisto(cPFAX, basis="TP");  histo3D_TP.SetDirectory(0);  rawHistoPackages.append([histo3D_TP, "TP", "", "TPRH", "E_{T,TP} / E_{T,RH}"])
+    histo3D_RH        = make3Dhisto(cPFAX, basis="RH");  histo3D_RH.SetDirectory(0);  rawHistoPackages.append([histo3D_RH, "RH", "", "TPRH", "E_{T,TP} / E_{T,RH}"])
 
-    # When providing ET ranges it always for PFA2 when in TP basis
-    for ieta in xrange(1,29):
-        ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[0.5,10],[ieta])
-        ratioTPVsRH(outFile,TPETvRatiovEta_TP,"TP",[10, 1000],[ieta])
+    histo3D_r43       = make3Dhisto(cPFAX,variable="ts4/ts3",basis="RH");                   histo3D_r43.SetDirectory(0);     rawHistoPackages.append([histo3D_r43, "RH", "", "r43", "TS4 / TS3"])
+    histo3D_r4total   = make3Dhisto(cPFAX,variable="ts4/(ts3+ts4+ts5+ts6+ts7)",basis="RH"); histo3D_r4total.SetDirectory(0); rawHistoPackages.append([histo3D_r4total, "RH", "", "r4total", "TS4 / Total"])
 
-        ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.0,10],[ieta])
-        ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.5,10],[ieta])
-        ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[10, 1000],[ieta])
+    #histo3D_RH_low  = make3Dhisto(cPFAX,"RH","pu>=55&&pu<62");  histo3D_RH_low.SetDirectory(0);  rawHistoPackages.append([histo3D_RH_low, "RH", "_PU55to62"]); print "Done making histo3D_RH_low!"
+    #histo3D_RH_mid  = make3Dhisto(cPFAX,"RH","pu>=62&&pu<69");  histo3D_RH_mid.SetDirectory(0);  rawHistoPackages.append([histo3D_RH_mid, "RH", "_PU62to69"]); print "Done making histo3D_RH_mid!"
+    #histo3D_RH_high = make3Dhisto(cPFAX,"RH","pu>=69&&pu<=75"); histo3D_RH_high.SetDirectory(0); rawHistoPackages.append([histo3D_RH_high,"RH", "_PU69to75"]); print "Done making histo3D_RH_high!"
 
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.0,10],[1,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[0.5,10],[1,28])
-    ratioTPVsRH(outFile,TPETvRatiovEta_RH,"RH",[10, 1000],[1,28])
+    for histoPackage in rawHistoPackages:
+        
+        for ieta in xrange(1,29):
+        
+            # If the basis is TP than the lower limit is already 0.5
+            make1D_Var(outFile, histoPackage, [0.0,10], [ieta])   
+            make1D_Var(outFile, histoPackage, [10, 1000], [ieta])
 
-    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_TP,"TP",[0.5,10])
-    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_TP,"TP",[10, 1000])
-    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_TP,"TP",[0.0,1000])
+        make2D_Var_vs_ET(outFile, histoPackage)
 
-    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[0.0,10])
-    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[0.5,10])
-    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[10, 1000])
-    ratioTPVsRH_Eta(outFile,TPETvRatiovEta_RH,"RH",[0.0, 1000])
+        # If the basis is TP than the lower limit is already 0.5
+        make2D_Var_vs_Eta(outFile, histoPackage, [0.0,10])
+        make1D_Var(outFile, histoPackage, [0.0,10],[1,28])
+        make1D_Var(outFile, histoPackage, [10, 1000],[1,28])
 
-    ratioTPVsRH_ET(outFile,TPETvRatiovEta_TP,"TP")
-    ratioTPVsRH_ET(outFile,TPETvRatiovEta_RH,"RH")
+        make2D_Var_vs_Eta(outFile, histoPackage, [10, 1000])
 
     outFile.Close()
    
@@ -189,14 +195,11 @@ if __name__ == '__main__':
     parser.add_argument("--inputSubPath"  , dest="inputSubPath"   , help="Subpath to input files"  , type=str , required=True)
     args = parser.parse_args()
 
-
-    HOME = os.getenv("HOME")
-    USER = os.getenv("USER")
+    HOME = os.getenv("HOME"); USER = os.getenv("USER")
     INPUTLOC = "/eos/uscms/store/user/%s/HCAL_Trigger_Study/hcalNtuples"%(USER)
     OUTPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Ratios"%(HOME)
 
     # Let the output folder structure mirror the input folder structure
-    PFAXFileStub = args.inputSubPath
-    outputStub   = PFAXFileStub
+    fileStub = args.inputSubPath
 
-    analysis(INPUTLOC + "/" + PFAXFileStub, OUTPUTLOC + "/" + outputStub)
+    analysis(INPUTLOC + "/" + fileStub, OUTPUTLOC + "/" + fileStub)
