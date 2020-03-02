@@ -112,9 +112,9 @@ elif "TTbar_50PU" in inputFile:
     process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_1.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_2.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU-50PU_3.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU_1.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU_2.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU_3.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
