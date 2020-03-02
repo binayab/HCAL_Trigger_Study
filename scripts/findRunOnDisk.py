@@ -93,7 +93,7 @@ def lumiAnalysis(run):
         lumis = lumis4File(aFile)
 
         for lumi in lumis:
-            if lumi > 800:
+            if lumi < 100:
                 print "File '%s' contains lumis "%(aFile)
                 print lumis
                 break
