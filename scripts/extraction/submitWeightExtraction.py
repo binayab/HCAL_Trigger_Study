@@ -14,6 +14,7 @@ parser.add_argument("--scheme"  , dest="scheme"  , help="Which reco scheme"     
 parser.add_argument("--contain" , dest="contain" , help="With pulse containment"  , default=False, action="store_true")
 parser.add_argument("--depth"   , dest="depth"   , help="Extract with depth"      , default=False, action="store_true")
 parser.add_argument("--oot"     , dest="oot"     , help="Use OOT sample"          , default=False, action="store_true")
+parser.add_argument("--pu"      , dest="pu"      , help="Level of PU in sample"   , type=str     , default="50PU")
 parser.add_argument("--nugun"   , dest="nugun"   , help="Use nu gun samples"      , default=False, action="store_true")
 parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
 parser.add_argument("--nJobs"   , dest="nJobs"   , help="number of jobs"          , type=int     , default=30)
@@ -31,6 +32,7 @@ eventsPerJob = 9000 / arg.nJobs
 exeName = "weightExtraction.py"
 exeStub = "python %s"%(exeName)
 exeStub += " --scheme %s"%(arg.scheme)
+exeStub += " --pu %s"%(arg.pu)
 
 if arg.contain: exeStub += " --contain"
 if arg.depth:   exeStub += " --depth"
@@ -44,18 +46,19 @@ workingDir = "%s/condor/%s"%(SANDBOX,taskStub)
 if not os.path.exists(outputDir):  os.makedirs(outputDir)
 if not os.path.exists(workingDir): os.makedirs(workingDir)
 
-exeFile = "%s/scripts/extraction/%s"%(SANDBOX,exeName)
-mapFile = "%s/scripts/extraction/pu2nopuMap.py"%(SANDBOX)
+exeFile = "%s/scripts/extraction/%s"%(SANDBOX,exeName); shutil.copy2(exeFile, workingDir)
 
-shutil.copy2(exeFile, workingDir)
-shutil.copy2(mapFile, workingDir)
+# For nu-gun case we do not need an event map
+# So do not copy it
+if not arg.nugun:
+    mapFile = "%s/scripts/extraction/pu2nopuMap.py"%(SANDBOX)
+    shutil.copy2(mapFile, workingDir)
 
-if outputDir.split("/")[-1] == "":  outputDir  = outputDir[:-1]
+if outputDir.split("/")[-1]  == "": outputDir  = outputDir[:-1]
 if workingDir.split("/")[-1] == "": workingDir = workingDir[:-1]
 
 # Create directories to save log, submit, and mac files if they don't already exist
-logDir = "%s/logs"%(workingDir)
-os.mkdir(logDir) # make the log directory
+os.mkdir("%s/logs"%(workingDir))
 
 # Write .sh script to be run by Condor
 scriptFile = open("%s/runJob.sh"%(workingDir), "w")
@@ -71,7 +74,7 @@ scriptFile.write("cd ./../..\n")
 scriptFile.write("%s --evtRange ${STARTEVENT} ${NUMEVENTS}\n"%(exeStub))
 scriptFile.write("ls -l\n")
 scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
-scriptFile.write("rm -r weightExtraction%s.py CMSSW_10_4_0_patch1\n"%(specialStub))
+scriptFile.write("rm -r weightExtraction.py CMSSW_10_4_0_patch1\n")
 scriptFile.close()
 
 # Write Condor submit file 
@@ -85,7 +88,10 @@ condorSubmit.write("WhenToTransferOutput = ON_EXIT\n")
 condorSubmit.write("Output = %s/logs/$(Cluster)_$(Process).stdout\n"%(workingDir))
 condorSubmit.write("Error = %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
 condorSubmit.write("Log = %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
-condorSubmit.write("Transfer_Input_Files = %s/%s, %s/pu2nopuMap.py\n"%(workingDir,exeName,workingDir))
+
+if not arg.nugun: condorSubmit.write("Transfer_Input_Files = %s/%s, %s/pu2nopuMap.py\n"%(workingDir,exeName,workingDir))
+else:             condorSubmit.write("Transfer_Input_Files = %s/%s\n"%(workingDir,exeName))
+
 condorSubmit.write("x509userproxy = $ENV(X509_USER_PROXY)\n\n")
 
 for iJob in xrange(0,nJobs):
