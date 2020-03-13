@@ -10,6 +10,7 @@ if __name__ == '__main__':
     parser.add_argument("--schemes"  , dest="schemes"   , help="Which PFA to use"           , type=str , nargs="+", required=True)
     parser.add_argument("--inputPath", dest="inputPath" , help="Subpath to input files"     , type=str , required=True)
     parser.add_argument("--versions" , dest="versions"  , help="List versions of weights"   , type=str , nargs="+", default=[""])
+    parser.add_argument("--tag"      , dest="tag"       , help="Unique tag for separating"  , type=str , default="")
     parser.add_argument("--updown"   , dest="updown"    , help="Do up/down variations"      , default=False, action="store_true")
     parser.add_argument("--depth"    , dest="depth"     , help="Do depth version"           , default=False, action="store_true")
     parser.add_argument("--mean"     , dest="mean"      , help="Do mean version"            , default=False, action="store_true")
@@ -23,6 +24,7 @@ if __name__ == '__main__':
     depth      = args.depth
     mean       = args.mean
     noSubmit   = args.noSubmit
+    tag        = args.tag
 
     HOME = os.getenv("HOME")
 
@@ -43,7 +45,7 @@ if __name__ == '__main__':
 
             INPUTDIR = "%s/%s"%(inputStub, weights)
 
-            theCommand = "python %s --inputSubPath %s"%(SCRIPT, INPUTDIR)
+            theCommand = "python %s --inputSubPath %s --tag %s"%(SCRIPT, INPUTDIR, tag)
             print "Executing command: '%s'"%(theCommand)
 
             FOUT = open("%s.txt"%(weights), 'w')
@@ -53,14 +55,14 @@ if __name__ == '__main__':
             if updown:
 
                 INPUTDIRUP = INPUTDIR + "_UP"
-                theCommand = "python %s --inputSubPath %s"%(SCRIPT, INPUTDIRUP)
+                theCommand = "python %s --inputSubPath %s --tag %s"%(SCRIPT, INPUTDIRUP, tag)
                 print "Executing command: '%s'"%(theCommand)
 
                 FOUTUP = open("%s_UP.txt"%(weights), 'w')
                 if not noSubmit: subprocess.Popen(theCommand.split(), stdout=FOUTUP, stderr=subprocess.STDOUT)
 
                 INPUTDIRDOWN = INPUTDIR + "_DOWN"
-                theCommand = "python %s --inputSubPath %s"%(SCRIPT, INPUTDIRDOWN)
+                theCommand = "python %s --inputSubPath %s --tag %s"%(SCRIPT, INPUTDIRDOWN, tag)
                 print "Executing command: '%s'"%(theCommand)
 
                 if not noSubmit: subprocess.Popen(theCommand.split(), stdout=FOUTDOWN, stderr=subprocess.STDOUT)
