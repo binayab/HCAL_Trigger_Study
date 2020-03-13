@@ -144,11 +144,15 @@ class WeightExtractor:
         print "Constructing per-ieta, per-event 8TS pulses"
         for iEvent in eventRange:
 
-            self.ttreepu.GetEntry(iEvent)
-            self.ttreenopu.GetEntry(PU2NOPUMAP[self.ttreepu.event])
+            puSuccess = self.ttreepu.GetEntry(iEvent)
+            nopuSuccess = self.ttreenopu.GetEntry(PU2NOPUMAP[self.ttreepu.event])
 
             if self.ttreepu.event != self.ttreenopu.event:
                 print "EVENT MISMATCH, SKIPPING THIS EVENT ENTRY!"
+                continue
+
+            elif puSuccess == 0 or nopuSuccess == 0:
+                print "Could not get entry %d!"%(iEvent)
                 continue
 
             self.event = self.ttreepu.event
@@ -915,10 +919,11 @@ if __name__ == '__main__':
     parser.add_argument("--contain"   , dest="contain"   , help="With pulse containment"   , default=False, action="store_true")
     parser.add_argument("--depth"     , dest="depth"     , help="Extract with depth"       , default=False, action="store_true")
     parser.add_argument("--oot"       , dest="oot"       , help="Use OOT sample"           , default=False, action="store_true")
+    parser.add_argument("--pu"        , dest="pu"        , help="Level of PU in sample"    , type=str     , default="50PU")
     parser.add_argument("--nugun"     , dest="nugun"     , help="Run on nugun samples"     , default=False, action="store_true")
     parser.add_argument("--scheme"    , dest="scheme"    , help="Which pulse filter scheme", type=str     , default="ALGO")
     parser.add_argument("--evtRange"  , dest="evtRange"  , help="Start and number"         , type=int     , nargs="+", default=[-1,1])
-    arg = parser.parse_args()
+    args = parser.parse_args()
 
     # Intend for things to work inside sandbox environment
     HOME = os.getenv("HOME")
@@ -926,50 +931,50 @@ if __name__ == '__main__':
     SANDBOX = HOME + "/nobackup/HCAL_Trigger_Study"
     INPUTLOC = "root://cmseos.fnal.gov//store/user/%s/HCAL_Trigger_Study/WeightExtraction"%(USER)
 
-    outPath = "%s/plots/Weights/%s/%s"%(SANDBOX,arg.scheme,arg.tag)
-    gFromCache = arg.fromCache
+    outPath = "%s/plots/Weights/%s/%s"%(SANDBOX,args.scheme,args.tag)
+    gFromCache = args.fromCache
 
     # The fromCache option is the main flag to decide if we are looping over events and extracting raw weights
     # or if we are reading back the raw histograms and producing the final results of the weights extraction
     if not gFromCache:
 
-        eventRange = xrange(arg.evtRange[0], arg.evtRange[0]+arg.evtRange[1]) 
+        eventRange = xrange(args.evtRange[0], args.evtRange[0]+args.evtRange[1]) 
 
-        # Here I pigeon-hole myself by anticipating a very specific input file naming convention
+        # Here, I pigeon-hole myself by anticipating a very specific input file naming convention
         # This removes the need to specify full file paths on the command line...
 
         # Default is to use OOT + IT sample: called 50PU.root
-        puStr = "50PU"
-        if arg.oot: puStr = "OOT"
+        puStr = args.pu 
+        if args.oot: puStr += "_OOT"
 
         # Default is to use the NoContain version of the sample
         # Pulse containment was turned off during TP generation
         containStr = "NoContain"
-        if arg.contain: containStr = "Contain"
+        if args.contain: containStr = "Contain"
 
         # Default is to use the NoDepth version of the sample
         # Depths have been collapsed in each ieta during TP gen.
         depthStr = "NoDepth"
-        if arg.depth: depthStr = "Depth"
+        if args.depth: depthStr = "Depth"
 
         # Default is to use the TTbar samples
         # Switch to NuGun if necessary
         processStr = "TTbar"
-        if arg.nugun: processStr = "NuGun"
+        if args.nugun: processStr = "NuGun"
                     
         # Construct the anticipated file path format
         PUFile   = "%s/%s/%s/%s/%s.root"  %(INPUTLOC, processStr, containStr, depthStr, puStr)
 
         # If running on NuGun samples there is not a NOPU.root
         noPUFile = ""
-        if not arg.nugun: noPUFile = "%s/%s/%s/%s/NOPU.root"%(INPUTLOC, processStr, containStr, depthStr)
+        if not args.nugun: noPUFile = "%s/%s/%s/%s/NOPU.root"%(INPUTLOC, processStr, containStr, depthStr)
 
         # Finally, make an extractor and begin the event loop
-        theExtractor = WeightExtractor(arg.scheme, PUFile, noPUFile, outPath, arg.depth)
+        theExtractor = WeightExtractor(args.scheme, PUFile, noPUFile, outPath, args.depth)
         theExtractor.eventLoop(eventRange)
 
     else:
-        theExtractor = WeightExtractor(arg.scheme, "", "", outPath, arg.depth)
+        theExtractor = WeightExtractor(args.scheme, "", "", outPath, args.depth)
 
         theExtractor.loadHistograms()
         theExtractor.extractFitWeights(save=True)
@@ -977,5 +982,5 @@ if __name__ == '__main__':
         theExtractor.getWeightSummary("Fit")
 
         theExtractor.drawPulseShapes("PU")
-        if not arg.nugun: theExtractor.drawPulseShapes("NOPU")
+        if not args.nugun: theExtractor.drawPulseShapes("NOPU")
         theExtractor.drawWeightCorrs()
