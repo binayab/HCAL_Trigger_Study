@@ -32,8 +32,9 @@ def generate_job_steerer(workingDir, schemeWeights, outputDir, CMSSW_VERSION):
 
     scriptFile = open("%s/runJob.sh"%(workingDir), "w")
     scriptFile.write("#!/bin/bash\n\n")
-    scriptFile.write("INPUTFILE=$1\n")
-    scriptFile.write("JOB=$2\n\n")
+    scriptFile.write("JOB=$1\n")
+    scriptFile.write("shift\n")
+    scriptFile.write("INPUTFILES=$@\n\n")
     scriptFile.write("export SCRAM_ARCH=slc7_amd64_gcc700\n\n")
     scriptFile.write("source /cvmfs/cms.cern.ch/cmsset_default.sh\n") 
     scriptFile.write("eval `scramv1 project CMSSW %s`\n\n"%(CMSSW_VERSION))
@@ -43,14 +44,14 @@ def generate_job_steerer(workingDir, schemeWeights, outputDir, CMSSW_VERSION):
     scriptFile.write("cd %s/src\n"%(CMSSW_VERSION))
     scriptFile.write("scramv1 b ProjectRename\n")
     scriptFile.write("eval `scramv1 runtime -sh`\n\n")
-    scriptFile.write("cmsRun analyze_HcalTrig.py %s ${INPUTFILE} ${JOB}\n\n"%(schemeWeights))
+    scriptFile.write("cmsRun analyze_HcalTrig.py ${JOB} %s ${INPUTFILES}\n\n"%(schemeWeights))
     scriptFile.write("xrdcp -f hcalNtuple_${JOB}.root %s 2>&1\n"%(outputDir))
     scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
     scriptFile.write("rm -r %s\n"%(CMSSW_VERSION))
     scriptFile.close()
 
 # Write Condor submit file 
-def generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION):
+def generate_condor_submit(workingDir, inputFiles, filesPerJob, CMSSW_VERSION):
 
     condorSubmit = open("%s/condorSubmit.jdl"%(workingDir), "w")
     condorSubmit.write("Executable           =  %s/runJob.sh\n"%(workingDir))
@@ -63,36 +64,44 @@ def generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION):
     condorSubmit.write("x509userproxy        =  $ENV(X509_USER_PROXY)\n")
     condorSubmit.write("Transfer_Input_Files =  %s/analyze_HcalTrig.py, %s/algo_weights.py, %s/%s.tar.gz\n\n"%(workingDir, workingDir, workingDir, CMSSW_VERSION))
 
-    iJob = 0
+    numFilesProc = 0; iJob = 0; iterator = 0; inFileStr = ""
     for inputFile in inputFiles:
-        
-        condorSubmit.write("Arguments       = %s %d\n"%(inputFile, iJob))
-        condorSubmit.write("Queue\n\n")
-
-        iJob += 1
     
+        if numFilesProc == len(inputFiles): break
+    
+        inFileStr += "%s "%(inputFile)
+        numFilesProc += 1; iterator += 1
+        if iterator == filesPerJob or numFilesProc == len(inputFiles):
+    
+            condorSubmit.write("Arguments = %d %s\n"%(iJob, inFileStr))
+            condorSubmit.write("Queue\n\n")
+    
+            iJob += 1; iterator = 0; inFileStr = ""
+
     condorSubmit.close()
 
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--noSubmit", dest="noSubmit", help="do not submit to cluster", default=False, action="store_true")
-    parser.add_argument("--schemes" , dest="schemes" , help="Which PFA scheme to use" , type=str , nargs="+", required=True)
-    parser.add_argument("--versions", dest="versions", help="List versions of weights", type=str , nargs="+", default=[""])
-    parser.add_argument("--updown"  , dest="updown"  , help="Do up/down variations"   , default=False, action="store_true")
-    parser.add_argument("--dataset" , dest="dataset" , help="Unique path to dataset"  , type=str , default="50PU")
-    parser.add_argument("--depth"   , dest="depth"   , help="Do depth version"        , default=False, action="store_true")
-    parser.add_argument("--mean"    , dest="mean"    , help="Do mean version"         , default=False, action="store_true")
-    parser.add_argument("--tag"     , dest="tag"     , help="Unique tag"              , type=str , default="NULL")
+    parser.add_argument("--noSubmit"   , dest="noSubmit"   , help="do not submit to cluster", default=False, action="store_true")
+    parser.add_argument("--schemes"    , dest="schemes"    , help="Which PFA scheme to use" , type=str , nargs="+", required=True)
+    parser.add_argument("--versions"   , dest="versions"   , help="List versions of weights", type=str , nargs="+", default=[""])
+    parser.add_argument("--updown"     , dest="updown"     , help="Do up/down variations"   , default=False, action="store_true")
+    parser.add_argument("--dataset"    , dest="dataset"    , help="Unique path to dataset"  , type=str , default="50PU")
+    parser.add_argument("--depth"      , dest="depth"      , help="Do depth version"        , default=False, action="store_true")
+    parser.add_argument("--mean"       , dest="mean"       , help="Do mean version"         , default=False, action="store_true")
+    parser.add_argument("--tag"        , dest="tag"        , help="Unique tag"              , type=str , default="NULL")
+    parser.add_argument("--filesPerJob", dest="filesPerJob", help="Files per job"           , type=int , default=5)
     args = parser.parse_args()
 
-    schemes  = args.schemes
-    versions = args.versions
-    mean     = args.mean
-    depth    = args.depth
-    tag      = args.tag
-    dataset  = args.dataset
-    noSubmit = args.noSubmit
+    schemes     = args.schemes
+    versions    = args.versions
+    mean        = args.mean
+    depth       = args.depth
+    tag         = args.tag
+    dataset     = args.dataset
+    noSubmit    = args.noSubmit
+    filesPerJob = args.filesPerJob
    
     variations = [""]
     if args.updown:
@@ -148,7 +157,7 @@ if __name__ == '__main__':
                 generate_job_steerer(workingDir, schemeWeights, outputDir, CMSSW_VERSION)
 
                 # Make the jdl to hold condor's hand
-                generate_condor_submit(workingDir, inputFiles, CMSSW_VERSION)
+                generate_condor_submit(workingDir, inputFiles, filesPerJob, CMSSW_VERSION)
 
                 subprocess.call(["chmod", "+x", "%s/runJob.sh"%(workingDir)])
 
