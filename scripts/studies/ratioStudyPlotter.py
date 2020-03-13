@@ -160,7 +160,7 @@ def analysis(PFAXFileDir, outDir):
         else:     cPFAX.AddFile(item)
 
     rawHistoPackages = []
-    histo3D_TP        = make3Dhisto(cPFAX, basis="TP");  histo3D_TP.SetDirectory(0);  rawHistoPackages.append([histo3D_TP, "TP", "", "TPRH", "E_{T,TP} / E_{T,RH}"])
+    #histo3D_TP        = make3Dhisto(cPFAX, basis="TP");  histo3D_TP.SetDirectory(0);  rawHistoPackages.append([histo3D_TP, "TP", "", "TPRH", "E_{T,TP} / E_{T,RH}"])
     histo3D_RH        = make3Dhisto(cPFAX, basis="RH");  histo3D_RH.SetDirectory(0);  rawHistoPackages.append([histo3D_RH, "RH", "", "TPRH", "E_{T,TP} / E_{T,RH}"])
 
     histo3D_r43       = make3Dhisto(cPFAX,variable="ts4/ts3",basis="RH");                   histo3D_r43.SetDirectory(0);     rawHistoPackages.append([histo3D_r43, "RH", "", "r43", "TS4 / TS3"])
@@ -192,7 +192,8 @@ def analysis(PFAXFileDir, outDir):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--inputSubPath"  , dest="inputSubPath"   , help="Subpath to input files"  , type=str , required=True)
+    parser.add_argument("--inputSubPath" , dest="inputSubPath" , help="Subpath to input files"     , type=str , required=True)
+    parser.add_argument("--tag"          , dest="tag"          , help="Unique tag for separating"  , type=str , default="")
     args = parser.parse_args()
 
     HOME = os.getenv("HOME"); USER = os.getenv("USER")
@@ -201,5 +202,6 @@ if __name__ == '__main__':
 
     # Let the output folder structure mirror the input folder structure
     fileStub = args.inputSubPath
+    tag      = args.tag
 
-    analysis(INPUTLOC + "/" + fileStub, OUTPUTLOC + "/" + fileStub)
+    analysis(INPUTLOC + "/" + fileStub, OUTPUTLOC + "/" + fileStub + "/" + tag)
