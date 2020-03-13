@@ -10,4 +10,4 @@ note
 **eventMap.py
 scripts/studies/pu2nopuMap.py
 scripts/analyze_HcalTrig_TEST.py
-scripts/towerBounds.txt
+**.txt
