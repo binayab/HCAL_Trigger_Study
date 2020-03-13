@@ -80,6 +80,7 @@ def set2Doptions(histo, contour = 255):
 
     histo.SetContour(255)
 
+# Take a TPaveText box and customize it accordingly
 def prettyText(text, color, algoName, mean, stddev):
 
     text.SetFillColor(ROOT.kWhite);
@@ -109,74 +110,39 @@ def fillMap(pfaKey, inRootDir):
 
            name = hkey.GetName()
            histo = hkey.ReadObj()
-           histo.SetDirectory(0)
            histo.SetName(name + "_" + pfaKey)
-           ROOT.SetOwnership(histo, False)
 
            histo.Sumw2()
            
            if name in MAPPFAHISTOS[pfaKey].keys(): MAPPFAHISTOS[pfaKey][name].Add(histo)
-           else: MAPPFAHISTOS[pfaKey][name] = histo
+           else: 
+               histo.SetDirectory(0)
+               ROOT.SetOwnership(histo, False)
 
-# The draw2DHistoAndProfile takes in a host canvas, a key to a dictionary, a histogram name
-# and some histogram style options. Using the key and histogram name, the method pulls the 2D
-# histo from the master dictionary MAPPFAHISTOS. From there a profile is made from the 2D.
-# The 2D and profile are made a little prettier and the error band around the profile is drawn if requested
-def draw2DHistoAndProfile(canvas, histo, histoUp, histoDown, zMax, color, markerStyle, drewRatio):
+               MAPPFAHISTOS[pfaKey][name] = histo
 
-    if histo == 0: return False
+# Using the nominal histogram and its up and down variation, create an error band
+def getUncertaintyBand(histo, histoUp, histoDown, fillColor):
 
-    pPFAX = histo.ProfileX("p_%s_%d"%(histo.GetName(),histo.GetUniqueID()), 1, -1, ""); ROOT.SetOwnership(pPFAX, False); pPFAX.Sumw2()
-
-    if histoUp != 0 and histoDown != 0:
-        set1Doptions(pPFAX, lineWidth = 1, markerColor = ROOT.kBlack, lineColor = ROOT.kBlack, markerStyle = markerStyle, markerSize = 2)
-    else:
-        set1Doptions(pPFAX, lineWidth = 0, markerColor = color, markerStyle = markerStyle)
-
-    setAxisDims(histo, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.95, 0.72, 1.0)
-
-    canvas.cd()
-
-    # Set some visual options for the actual 2D histogram
-    if not drewRatio:
-        setAxisRanges(histo, yMin = 0.1, yMax = 2.0, zMin = 1, zMax = zMax)
-
-        if "ET_" in histo.GetName(): setAxisRanges(histo, xMin = 0, xMax = 30)
-        if "r4"  in histo.GetName(): setAxisRanges(histo, yMin = 0, yMax = 1.1)
-
-        set2Doptions(histo, contour = 255)
-        histo.Draw("COLZ")
-
-        drewRatio = True
-
-    pPFAX.Draw("EP SAME")
-
-    # If both and up and down variation of the variable are provided, make an uncertainty band 
+    gPFAXBand = 0
     if histoUp != 0 and histoDown != 0:
 
-        gPFAXBand = 0
+        pPFAX     = histo.ProfileX("p_%s_%d_ub"%(histo.GetName(),histo.GetUniqueID()), 1, -1, "");             pPFAX.Sumw2()
+        pPFAXUp   = histoUp.ProfileX("p_%s_%d_ub"%(histoUp.GetName(),histoUp.GetUniqueID()), 1, -1, "");       pPFAXUp.Sumw2()
+        pPFAXDown = histoDown.ProfileX("p_%s_%d_ub"%(histoDown.GetName(),histoDown.GetUniqueID()), 1, -1, ""); pPFAXDown.Sumw2()
 
-        pPFAXUp   = histoUp.ProfileX("p_%s_%d"%(histoUp.GetName(),histoUp.GetUniqueID()), 1, -1, "");       pPFAXUp.Sumw2()
-        pPFAXDown = histoDown.ProfileX("p_%s_%d"%(histoDown.GetName(),histoDown.GetUniqueID()), 1, -1, ""); pPFAXDown.Sumw2()
+        gPFAXBand = makeBandGraph(pPFAXUp, pPFAXDown, pPFAX, fillColor)
 
-        gPFAXBand = makeBandGraph(pPFAXUp, pPFAXDown, pPFAX, color)
-
-        set1Doptions(gPFAXBand, lineWidth=3, lineColor=color, markerSize = 0)
+        set1Doptions(gPFAXBand, lineWidth = 3, lineColor = fillColor, markerColor = fillColor, markerSize = 0)
            
-        if gPFAXBand:
-            ROOT.SetOwnership(gPFAXBand, False)
-            gPFAXBand.Draw("2SAME")
+        if gPFAXBand: ROOT.SetOwnership(gPFAXBand, False)
 
-    pPFAX.Draw("EP SAME")
-
-    first = histo.GetXaxis().GetBinLowEdge(histo.GetXaxis().GetFirst()); last = histo.GetXaxis().GetBinUpEdge(histo.GetXaxis().GetLast())
-
-    return drewRatio, first, last
+    return gPFAXBand
 
 # The method for 1D histos is the draw1DHisto method. Here the 1D histogram
 # is prettied up and added to a THStack. In addition, we use parameters of the 1D
 # histogram to make a custom TPaveText and return it.
-def draw1DHisto(theStack, histo, histoUp, histoDown, schemeName, color, lineStyle, x1, y1, x2, y2):
+def draw1DHisto(theStack, histo, histoUp, histoDown, color, markerStyle):
 
     mean   = histo.GetMean()
     stddev = histo.GetStdDev()
@@ -187,16 +153,13 @@ def draw1DHisto(theStack, histo, histoUp, histoDown, schemeName, color, lineStyl
         stddevDown = histoDown.GetStdDev()
 
     setAxisDims(histo, 0.042, 0.042, 0.042, 0.052, 0.052, 0.052, 1.06, 1.2, 1.0)
-    set1Doptions(histo, lineColor = color, lineStyle = lineStyle, markerSize = 0, normalize = True)
+    set1Doptions(histo, lineColor = color, markerStyle = markerStyle, markerSize = 0, normalize = True)
 
     theStack.Add(histo)
     theStack.GetXaxis().SetTitle(histo.GetXaxis().GetTitle())
     theStack.GetYaxis().SetTitle(histo.GetYaxis().GetTitle())
 
-    someTextPFAX = ROOT.TPaveText(x1, y1, x2, y2, "trNDC")
-    prettyText(someTextPFAX, color, schemeName, mean, stddev)
-
-    return someTextPFAX, stddev, stddevUp, stddevDown, mean
+    return stddev, stddevUp, stddevDown, mean
 
 if __name__ == '__main__':
 
@@ -205,54 +168,130 @@ if __name__ == '__main__':
     parser.add_argument("--pfaY"     , dest="pfaY"     , type=str, default="NULL", help="Subpath to inputs for PFAY")
     parser.add_argument("--pfaX1"    , dest="pfaX1"    , type=str, default="NULL", help="Subpath to other PFAX dir") 
     parser.add_argument("--pfaX2"    , dest="pfaX2"    , type=str, default="NULL", help="Subpath to other PFAX dir") 
+    parser.add_argument("--pfaX3"    , dest="pfaX3"    , type=str, default="NULL", help="Subpath to other PFAX dir") 
     parser.add_argument("--pfaX1Err" , dest="pfaX1Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
     parser.add_argument("--pfaX2Err" , dest="pfaX2Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
+    parser.add_argument("--pfaX3Err" , dest="pfaX3Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
     args = parser.parse_args()
 
     tag = args.tag
     
     MAPPFAHISTOS = {}
-
-    # Figure out the stub to use for the output directory
-    # If neither pfaX1 or pfaX2 have been specified then quit!
-    if   args.pfaX1 != "NULL": stub = args.pfaX1.split("Ratios/")[-1]
-    elif args.pfaX2 != "NULL": stub = args.pfaX2.split("Ratios/")[-1]
-    else: quit()
+    schemeMap = {}
+    stub = ""
 
     HOME = os.getenv("HOME")
     OUTBASE  = "%s/nobackup/HCAL_Trigger_Study/plots/Ratios"%(HOME)
     INPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Ratios"%(HOME)
 
-    # Save the input directories provided and fill the map of histos
-    fillMap("PFAY" , INPUTLOC + "/" + args.pfaY)
-    fillMap("PFAX1", INPUTLOC + "/" + args.pfaX1)
-    fillMap("PFAX2", INPUTLOC + "/" + args.pfaX2)
+    # The only place we hard code the options is here. This will allow us to set colors of histo lines
+    # markers, fill etc.
+    if args.pfaX1 != "NULL":
+        stub = args.pfaX1.split("Ratios/")[-1]
+        schemeMap.setdefault("PFAX1", {}).setdefault("path", args.pfaX1)
+        schemeMap["PFAX1"]["scheme"] = "PFA" + args.pfaX1.split("PFA")[-1].split("_")[0]
+        schemeMap["PFAX1"]["mcolor"] = ROOT.kBlack
+        schemeMap["PFAX1"]["lcolor"] = ROOT.kBlack
+        schemeMap["PFAX1"]["bmcolor"] = ROOT.kBlack
+        schemeMap["PFAX1"]["blcolor"] = ROOT.kBlack
+        schemeMap["PFAX1"]["fcolor"] = ROOT.kRed
+        schemeMap["PFAX1"]["style"] = 20
+        schemeMap["PFAX1"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX1"]["resHigh"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX1"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX1"]["resHighBand"] = ROOT.TGraphAsymmErrors(28) 
 
-    # If we want the error bands, add those histograms to the map as well
-    if args.pfaX1Err:
-        fillMap("PFAX1Up"  , INPUTLOC + "/" + args.pfaX1 + "_UP"  )
-        fillMap("PFAX1Down", INPUTLOC + "/" + args.pfaX1 + "_DOWN")
-    if args.pfaX2Err:              
-        fillMap("PFAX2Up"  , INPUTLOC + "/" + args.pfaX2 + "_UP"  )
-        fillMap("PFAX2Down", INPUTLOC + "/" + args.pfaX2 + "_DOWN")
-       
+        fillMap("PFAX1", INPUTLOC + "/" + args.pfaX1)
+
+        if args.pfaX1Err:
+            fillMap("PFAX1Up"  , INPUTLOC + "/" + args.pfaX1 + "_UP"  )
+            fillMap("PFAX1Down", INPUTLOC + "/" + args.pfaX1 + "_DOWN")
+            schemeMap["PFAX1"]["error"] = True 
+        else:
+            schemeMap["PFAX1"]["error"] = False
+
+    if args.pfaX2 != "NULL":
+        stub = args.pfaX2.split("Ratios/")[-1]
+        schemeMap.setdefault("PFAX2", {}).setdefault("path", args.pfaX2)
+        schemeMap["PFAX2"]["scheme"] = "PFA" + args.pfaX2.split("PFA")[-1].split("_")[0]
+        schemeMap["PFAX2"]["mcolor"] = ROOT.kRed
+        schemeMap["PFAX2"]["lcolor"] = ROOT.kRed
+        schemeMap["PFAX2"]["bmcolor"] = ROOT.kBlack
+        schemeMap["PFAX2"]["blcolor"] = ROOT.kBlack
+        schemeMap["PFAX2"]["fcolor"] = ROOT.kGray+2
+        schemeMap["PFAX2"]["style"] = 20
+        schemeMap["PFAX2"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX2"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAX2"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX2"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+
+        fillMap("PFAX2", INPUTLOC + "/" + args.pfaX2)
+
+        if args.pfaX2Err:              
+            fillMap("PFAX2Up"  , INPUTLOC + "/" + args.pfaX2 + "_UP"  )
+            fillMap("PFAX2Down", INPUTLOC + "/" + args.pfaX2 + "_DOWN")
+            schemeMap["PFAX2"]["error"] = True 
+        else:
+            schemeMap["PFAX2"]["error"] = False
+
+    if args.pfaX3 != "NULL":
+        stub = args.pfaX3.split("Ratios/")[-1]
+        schemeMap.setdefault("PFAX3", {}).setdefault("path", args.pfaX3)
+        schemeMap["PFAX3"]["scheme"] = "PFA" + args.pfaX3.split("PFA")[-1].split("_")[0]
+        schemeMap["PFAX3"]["mcolor"] = ROOT.kBlue+1
+        schemeMap["PFAX3"]["lcolor"] = ROOT.kBlue+1
+        schemeMap["PFAX3"]["bmcolor"] = ROOT.kBlue+1
+        schemeMap["PFAX3"]["blcolor"] = ROOT.kBlue+1
+        schemeMap["PFAX3"]["fcolor"] = ROOT.kBlue+1
+        schemeMap["PFAX3"]["style"] = 20
+        schemeMap["PFAX3"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX3"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAX3"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX3"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+
+        fillMap("PFAX3", INPUTLOC + "/" + args.pfaX3)
+
+        if args.pfaX3Err:              
+            fillMap("PFAX3Up"  , INPUTLOC + "/" + args.pfaX3 + "_UP"  )
+            fillMap("PFAX3Down", INPUTLOC + "/" + args.pfaX3 + "_DOWN")
+            schemeMap["PFAX3"]["error"] = True 
+        else:
+            schemeMap["PFAX3"]["error"] = False
+
+    if args.pfaY != "NULL":
+        stub = args.pfaY.split("Ratios/")[-1]
+        schemeMap.setdefault("PFAY", {}).setdefault("path", args.pfaY)
+        schemeMap["PFAY"]["scheme"] = "PFA" + args.pfaY.split("PFA")[-1].split("_")[0]
+        schemeMap["PFAY"]["mcolor"] = ROOT.kGray+2
+        schemeMap["PFAY"]["lcolor"] = ROOT.kGray+2
+        schemeMap["PFAY"]["fcolor"] = ROOT.kGray+2
+        schemeMap["PFAY"]["style"] = 4 
+        schemeMap["PFAY"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAY"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAY"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAY"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+
+        fillMap("PFAY" , INPUTLOC + "/" + args.pfaY)
+
+        schemeMap["PFAY"]["error"] = False
+
     # Set up the output directory and make it if it does not exist
     outpath = "%s/%s/%s"%(OUTBASE,stub,tag)
     if not os.path.exists(outpath): os.makedirs(outpath)
 
-    pfaX1resHistLow = ROOT.TGraphAsymmErrors(28)
-    pfaX2resHistLow = ROOT.TGraphAsymmErrors(28)
-    pfaYresHistLow  = ROOT.TGraphAsymmErrors(28)
-
-    pfaX1resHistHigh = ROOT.TGraphAsymmErrors(28)
-    pfaX2resHistHigh = ROOT.TGraphAsymmErrors(28)
-    pfaYresHistHigh  = ROOT.TGraphAsymmErrors(28)
-
+    # Use a dummy histo to draw the TGraphAsymmErrors on later
     pfaResHistDummy  = ROOT.TH1F("pfaResHistDummy", ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
     setAxisDims(pfaResHistDummy, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.85, 1.0)
     setAxisRanges(pfaResHistDummy, yMin = 0.0, yMax = 0.7)
 
-    # Save the final histograms
+    # Determine if we will be drawing uncertainty bands
+    # This will modify how we draw things later on
+    withUncertaintyBand = False
+    for scheme, options in schemeMap.iteritems(): withUncertaintyBand |= options["error"]
+
+    # Begin the main loop to loop over the histogram names
+    # And draw the results for the provided schemes together
+    # Discriminate whether drawing TH2 or TH1
     mapNameToHisto = MAPPFAHISTOS.values()[0]
     for name in mapNameToHisto.keys():
 
@@ -262,8 +301,6 @@ if __name__ == '__main__':
 
             ROOT.gStyle.SetErrorX(0.5)
 
-            zMax = 8e4
-            
             c1 = ROOT.TCanvas("%s"%(name), "%s"%(name), 2400, 1440); c1.cd(); c1.SetLogz()
 
             ROOT.gPad.SetTopMargin(0.026)
@@ -271,45 +308,68 @@ if __name__ == '__main__':
             ROOT.gPad.SetLeftMargin(0.11)
             ROOT.gPad.SetRightMargin(0.12)
 
-            drewRatio = False
-            hPFAX1 = 0; hPFAX1Up = 0; hPFAX1Down = 0;
-            hPFAX2 = 0; hPFAX2Up = 0; hPFAX2Down = 0;
-            hPFAY = 0; first = 0; last = 0
-            if "PFAX1" in MAPPFAHISTOS:
+            # Loop over each scheme to gets its corresponding histo
+            # for the current histo name
+            # Collect 2D histos, profiles and graph bands together so they
+            # can be drawn in the correct order
+            lBegin = 0; lEnd = 0
+            ratios = []; profiles = []; bands = []
+            for scheme, options in sorted(schemeMap.iteritems()):
 
-                if name not in MAPPFAHISTOS["PFAX1"]: continue
+                # Tries are cheap, use them to check for nested dictionary key 
+                hPFA = 0
+                try: hPFA = MAPPFAHISTOS[scheme][name]
+                except: continue
 
-                hPFAX1 = MAPPFAHISTOS["PFAX1"][name]
-                color = ROOT.kBlack
-                if args.pfaX1Err:
-                    hPFAX1Up   = MAPPFAHISTOS["PFAX1Up"][name]
-                    hPFAX1Down = MAPPFAHISTOS["PFAX1Down"][name]
-                    color = ROOT.kGray+2
-                 
-                drewRatio, first, last = draw2DHistoAndProfile(c1, hPFAX1, hPFAX1Up, hPFAX1Down, zMax, color, 20, drewRatio)
+                hPFAUp = 0; hPFADown = 0;
+                if options["error"]:
+                    hPFAUp   = MAPPFAHISTOS[scheme + "Up"][name]
+                    hPFADown = MAPPFAHISTOS[scheme + "Down"][name]
 
-            if "PFAX2" in MAPPFAHISTOS:
+                # Very careful now, take the profile before cutting off the y range!
+                profile = hPFA.ProfileX("p_%s_%d"%(hPFA.GetName(),hPFA.GetUniqueID()), 1, -1, ""); ROOT.SetOwnership(profile, False); profile.Sumw2()
 
-                if name not in MAPPFAHISTOS["PFAX2"]: continue
+                band = getUncertaintyBand(hPFA, hPFAUp, hPFADown, options["fcolor"])
+                bands.append(band)
 
-                hPFAX2 = MAPPFAHISTOS["PFAX2"][name]
-                if args.pfaX2Err:
-                    hPFAX2Up   = MAPPFAHISTOS["PFAX2Up"][name]
-                    hPFAX2Down = MAPPFAHISTOS["PFAX2Down"][name]
+                # Start setting pretty drawing options for the 2D histo itself
+                setAxisDims(hPFA, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.95, 0.72, 1.0)
+                setAxisRanges(hPFA, yMin = 0.1, yMax = 2.0, zMin = 1, zMax = 8e4)
+            
+                # Depending on the variable being plotted choose the range differently
+                if "ET_" in hPFA.GetName(): setAxisRanges(hPFA, xMin = 0, xMax = 30)
+                if "r4"  in hPFA.GetName(): setAxisRanges(hPFA, yMin = 0, yMax = 1.1)
+            
+                set2Doptions(hPFA, contour = 255)
 
-                drewRatio, first, last = draw2DHistoAndProfile(c1, hPFAX2, hPFAX2Up, hPFAX2Down, zMax, ROOT.kRed, 20, drewRatio)
+                ratios.append(hPFA)
 
-            if "PFAY"  in MAPPFAHISTOS:
+                # Here we decide the style options if we have an uncertainty band or not
+                if withUncertaintyBand: set1Doptions(profile, lineWidth = 1, markerColor = options["bmcolor"], lineColor = options["blcolor"], markerStyle = options["style"], markerSize = 2)
+                else:                   set1Doptions(profile, lineWidth = 0, markerColor = options["mcolor"], markerStyle = options["style"])
 
-                if name not in MAPPFAHISTOS["PFAY"]: continue
+                profiles.append(profile)
 
-                hPFAY = MAPPFAHISTOS["PFAY"][name]
-                drewRatio, first, last = draw2DHistoAndProfile(c1, hPFAY, 0, 0, zMax, ROOT.kBlack, 4, drewRatio)
-
-            l = ROOT.TLine(first, 1, last, 1) 
+                first = hPFA.GetXaxis().GetBinLowEdge(hPFA.GetXaxis().GetFirst()); last = hPFA.GetXaxis().GetBinUpEdge(hPFA.GetXaxis().GetLast())
+        
+            l = ROOT.TLine(lBegin, 1, lEnd, 1) 
             l.SetLineWidth(3)
             l.SetLineColor(ROOT.kBlack)
             l.SetLineStyle(2)
+
+            c1.cd()
+
+            # Only draw first 2D histo in list
+            ratios[0].Draw("COLZ")
+
+            # Draw error bands next (if any)
+            for band in reversed(bands):
+                if band != 0: band.Draw("2SAME")
+
+            # Finally draw profiles on top of everything
+            for profile in profiles:
+                if profile != 0: profile.Draw("EP SAME")
+
             l.DrawLine(first, 1, last, 1)
     
             c1.SaveAs("%s/%s.pdf"%(outpath,name))
@@ -324,9 +384,6 @@ if __name__ == '__main__':
             ROOT.gPad.SetLeftMargin(0.14)
             ROOT.gPad.SetRightMargin(0.02)
 
-            t_pfaX1 = 0; t_pfaX2 = 0; t_pfaY = 0
-            hPFAX1Up = 0; hPFAX1Down = 0;
-            hPFAX2Up = 0; hPFAX2Down = 0;
             theStack = ROOT.THStack("theStack_%s"%(name), ""); theStack.Draw()
 
             ietaList = name.split("ieta")[-1].split("_")[0].split("to"); ieta = int(ietaList[0])
@@ -337,91 +394,53 @@ if __name__ == '__main__':
             else:
                 ietaStr = "%s"%(ietaList[0])
 
-            schemeStubX1 = "PFA" + args.pfaX1.split("PFA")[-1].split("_")[0]
-            schemeStubX2 = "PFA" + args.pfaX2.split("PFA")[-1].split("_")[0]
-            schemeStubY  = "PFA" + args.pfaY.split("PFA")[-1].split("_")[0]
+            etBinLow  = "RHET0.0to10.0"  in name and "TPRH" in name and "TPETgt0.5" in name
+            etBinHigh = ("RHET10.0to1000" in name or "RHET10.0toInf" in name) and "TPRH" in name and "TPETgt0.5" in name
 
-            splitName = name.split("_")
-            etBinLow  = "RHET0.0to10.0"  in str(splitName[1]) and "TPRH" in str(splitName[0])
-            etBinHigh = "RHET10.0to1000" in str(splitName[1]) and "TPRH" in str(splitName[0])
-            
-            pfaX1res = 0;     pfaX2res = 0;     pfaYres = 0
-            pfaX1resUp = 0;   pfaX2resUp = 0;   pfaYresUp = 0
-            pfaX1resDown = 0; pfaX2resDown = 0; pfaYresDown = 0
-            if "PFAX1" in MAPPFAHISTOS:
-                if name not in MAPPFAHISTOS["PFAX1"]: continue
+            textYstart = 0.85; textYinc = 0.18
+            textXstart = 0.75
 
-                hPFAX1 = MAPPFAHISTOS["PFAX1"][name]
-                if args.pfaX1Err:
-                    hPFAX1Up   = MAPPFAHISTOS["PFAX1Up"][name]
-                    hPFAX1Down = MAPPFAHISTOS["PFAX1Down"][name]
-
-                t_pfaX1, pfaX1res, pfaX1resUp, pfaX1resDown, pfaX1mean = draw1DHisto(theStack, hPFAX1, hPFAX1Up, hPFAX1Down, schemeStubX1, ROOT.kBlack, 1, 0.75, 0.52, 0.92, 0.67)
-                if not skipRes:
-                    errLow = pfaX1res-pfaX1resDown; errHigh = pfaX1resUp-pfaX1res
-                    if not args.pfaX1Err:
-                        errLow = 0.
-                        errHigh = 0.
-
-                    if errLow < 0. and errHigh > 0. or errLow > 0. and errHigh < 0.:
-                        if abs(errLow) >= abs(errHigh): errHigh = 0.
-                        else: errLow = 0.
-
-                    if etBinLow:
-                        print  pfaX1res, pfaX1resUp, pfaX1resDown
-
-                        pfaX1resHistLow.SetPoint(ieta-1, ieta, pfaX1res)
-                        pfaX1resHistLow.SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
-
-                    elif etBinHigh:
-                        pfaX1resHistHigh.SetPoint(ieta-1, ieta, pfaX1res)
-                        pfaX1resHistHigh.SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
-
-            if "PFAX2" in MAPPFAHISTOS:
-                if name not in MAPPFAHISTOS["PFAX2"]: continue
-
-                hPFAX2 = MAPPFAHISTOS["PFAX2"][name]
-                if args.pfaX2Err:
-                    hPFAX2Up   = MAPPFAHISTOS["PFAX2Up"][name]
-                    hPFAX2Down = MAPPFAHISTOS["PFAX2Down"][name]
-
-                t_pfaX2, pfaX2res, pfaX2resUp, pfaX2resDown, pfaX2mean = draw1DHisto(theStack, hPFAX2, hPFAX2Up, hPFAX2Down, schemeStubX2, ROOT.kRed, 1, 0.75, 0.34, 0.92, 0.49)
-                if not skipRes:
-                    errLow = pfaX2res-pfaX2resDown; errHigh = pfaX2resUp-pfaX2res
-                    if not args.pfaX2Err:
-                        errLow = 0.
-                        errHigh = 0.
-
-                    if errLow < 0. and errHigh > 0. or errLow > 0. and errHigh < 0.:
-                        if abs(errLow) >= abs(errHigh): errHigh = 0.
-                        else: errLow = 0.
-
-                    if etBinLow:
-                        pfaX2resHistLow.SetPoint(ieta-1, ieta, pfaX2res)
-                        pfaX2resHistLow.SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
-
-                    elif etBinHigh:
-                        pfaX2resHistHigh.SetPoint(ieta-1, ieta, pfaX2res)
-                        pfaX2resHistHigh.SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
-
-            if "PFAY"  in MAPPFAHISTOS:
-                if name not in MAPPFAHISTOS["PFAY"]: continue
-
-                hPFAY = MAPPFAHISTOS["PFAY"][name]
-                t_pfaY, pfaYres, pfaYresUp, pfaYresDown, pfaYmean  = draw1DHisto(theStack, hPFAY, 0, 0, schemeStubY, ROOT.kGray+2, 1, 0.75, 0.70, 0.92, 0.85)
-                if not skipRes:
-
-                    if etBinLow:
-                        pfaYresHistLow.SetPoint(ieta-1, ieta, pfaYres)
-                        pfaYresHistLow.SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2,  0, 0)
-
-                    elif etBinHigh:
-                        pfaYresHistHigh.SetPoint(ieta-1, ieta, pfaYres)
-                        pfaYresHistHigh.SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 0, 0)
-
-            ietaText = ROOT.TPaveText(0.72, 0.86, 0.92, 0.95, "trNDC")
+            ietaText = ROOT.TPaveText(textXstart-0.03, 0.86, textXstart+0.17, textYstart+0.1, "trNDC")
             ietaText.SetFillColor(ROOT.kWhite); ietaText.SetTextAlign(11); ietaText.SetTextFont(63); ietaText.SetTextSize(80)
             ietaText.AddText("|i#eta| = %s"%(ietaStr))
+
+            textList = []
+            for scheme, options in schemeMap.iteritems():
+                if name not in MAPPFAHISTOS[scheme]: continue
+
+                hPFA = MAPPFAHISTOS[scheme][name]
+                hPFAUp = 0; hPFADown = 0;
+                if options["error"]:
+                    hPFAUp   = MAPPFAHISTOS[scheme + "Up"][name]
+                    hPFADown = MAPPFAHISTOS[scheme + "Down"][name]
+
+                pfares, pfaresUp, pfaresDown, pfamean = draw1DHisto(theStack, hPFA, hPFAUp, hPFADown, options["mcolor"], options["style"])
+
+                someTextPFA = ROOT.TPaveText(textXstart, textYstart-0.15, textXstart+0.17, textYstart, "trNDC")
+                prettyText(someTextPFA, options["mcolor"], options["scheme"], pfamean, pfares)
+                textList.append(someTextPFA)
+
+                if not skipRes:
+                    errLow = pfares-pfaresDown; errHigh = pfaresUp-pfares
+                    if not options["error"]:
+                        errLow = 0.
+                        errHigh = 0.
+
+                    if errLow < 0. and errHigh > 0. or errLow > 0. and errHigh < 0.:
+                        if abs(errLow) >= abs(errHigh): errHigh = 0.
+                        else: errLow = 0.
+
+                    if etBinLow:
+                        options["resLow"].SetPoint(ieta-1, ieta, pfares); options["resLowBand"].SetPoint(ieta-1, ieta, pfares)
+                        options["resLowBand"].SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
+                        options["resLow"].SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 0, 0)
+
+                    elif etBinHigh:
+                        options["resHigh"].SetPoint(ieta-1, ieta, pfares); options["resHighBand"].SetPoint(ieta-1, ieta, pfares)
+                        options["resHighBand"].SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
+                        options["resHigh"].SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 0, 0)
+
+                textYstart -= textYinc
 
             setAxisDims(theStack, 0.042, 0.042, 0.042, 0.052, 0.052, 0.052, 1.06, 1.4, 1.0)
             setAxisRanges(theStack, xMin = 0.23, xMax = 2.98)
@@ -429,30 +448,18 @@ if __name__ == '__main__':
             theStack.Draw("HIST NOSTACK")
 
             ietaText.Draw("SAME")
-            if t_pfaX1 != 0: t_pfaX1.Draw("SAME")
-            if t_pfaX2 != 0: t_pfaX2.Draw("SAME")
-            if t_pfaY  != 0: t_pfaY.Draw("SAME")
+            for text in textList: text.Draw("SAME")
 
             c1.SaveAs("%s/%s.pdf"%(outpath,name))
 
     # Now do resolution plots
     ROOT.gStyle.SetErrorX(0.5)
 
-    canvases = []
-    canvases.append(ROOT.TCanvas("pfa_res_low", "pfa_res_low", 2400, 1440))
-    canvases.append(ROOT.TCanvas("pfa_res_high", "pfa_res_high", 2400, 1440))
+    for regime in ["resLow", "resHigh"]:
 
-    # Low ET bin is i == 0 and high ET bin is i == 1
-    for i in xrange(len(canvases)):
+        canvas = ROOT.TCanvas("pfa_%s"%(regime), "pfa_%s"%(regime), 2400, 1440)
 
-        pfaYtext = ""; pfaX1text = ""; pfaX2text = ""
-        pfaYgraph = 0; pfaX1graph = 0; pfaX2graph = 0
-
-        # Case for low ET bin
-        if i == 0: pfaYgraph = pfaYresHistLow;  pfaX1graph = pfaX1resHistLow;  pfaX2graph = pfaX2resHistLow
-        if i == 1: pfaYgraph = pfaYresHistHigh; pfaX1graph = pfaX1resHistHigh; pfaX2graph = pfaX2resHistHigh
-
-        canvases[i].cd(); canvases[i].SetGridy(); canvases[i].SetGridx()
+        canvas.cd(); canvas.SetGridy(); canvas.SetGridx()
         ROOT.gPad.SetTopMargin(0.03)
         ROOT.gPad.SetBottomMargin(0.14)
         ROOT.gPad.SetLeftMargin(0.13)
@@ -460,50 +467,39 @@ if __name__ == '__main__':
        
         pfaResHistDummy.Draw("")
 
-        iamTextX1 = ROOT.TPaveText(0.7, 0.69, 0.8, 0.75, "trNDC"); iamTextX1.SetFillColor(ROOT.kWhite); iamTextX1.SetTextAlign(12); iamTextX1.SetTextFont(63); iamTextX1.SetTextSize(90)
-        if "PFAX1" in MAPPFAHISTOS:
+        textYstart = 0.93; textXstart = 0.8
+        graphs = []; bands = []; texts = []
+        for scheme, options in schemeMap.iteritems():
 
-            drawOption = ""
-            if args.pfaX1Err:
-                set1Doptions(pfaX1graph, lineWidth = 1, fillColor = ROOT.kGray+2, lineColor = ROOT.kGray+2, markerSize = 4, markerColor = ROOT.kBlack)
-                drawOption = "P2SAME"
-                
-            else:
-                set1Doptions(pfaX1graph, lineWidth = 3, lineColor = ROOT.kBlack, markerSize = 4, markerColor = ROOT.kBlack)
-                drawOption = "PSAME"
+            iamText = ROOT.TPaveText(textXstart-0.1, textYstart-0.06, textXstart, textYstart, "trNDC"); iamText.SetFillColor(ROOT.kWhite); iamText.SetTextAlign(12); iamText.SetTextFont(63); iamText.SetTextSize(90)
+            iamText.AddText(options["scheme"])
+            iamText.SetTextColor(options["mcolor"])
+            texts.append(iamText)
 
-            iamTextX1.AddText("PFA" + args.pfaX1.split("PFA")[-1].split("_")[0])
-            iamTextX1.SetTextColor(ROOT.kBlack)
+            if scheme in MAPPFAHISTOS:
 
-            pfaX1graph.Draw(drawOption)
-            iamTextX1.Draw("SAME")
+                drawOption = ""
+                if withUncertaintyBand: 
+                    set1Doptions(options[regime], lineWidth = 1, fillColor = options["fcolor"], lineColor = options["blcolor"], markerSize = 2, markerColor = options["bmcolor"])
+                    set1Doptions(options[regime+"Band"], lineWidth = 1, fillColor = options["fcolor"], lineColor = options["blcolor"], markerSize = 2, markerColor = options["bmcolor"])
+                    graphs.append(options[regime])
+                    bands.append(options[regime+"Band"])
+                    
+                else:
+                    set1Doptions(options[regime], lineWidth = 3, lineColor = options["lcolor"], markerSize = 4, markerColor = options["mcolor"])
+                    set1Doptions(options[regime+"Band"], lineWidth = 3, lineColor = options["lcolor"], markerSize = 4, markerColor = options["mcolor"])
+                    graphs.append(options[regime])
+                    bands.append(options[regime+"Band"])
 
-        iamTextX2 = ROOT.TPaveText(0.7, 0.78, 0.8, 0.84, "trNDC"); iamTextX2.SetFillColor(ROOT.kWhite); iamTextX2.SetTextAlign(12); iamTextX2.SetTextFont(63); iamTextX2.SetTextSize(90)
-        if "PFAX2" in MAPPFAHISTOS:
+                #textYstart -= 0.09
 
-            drawOption = ""
-            if args.pfaX2Err:
-                set1Doptions(pfaX2graph, lineWidth = 1, fillColor = ROOT.kRed, lineColor = ROOT.kBlack, markerSize = 3, markerColor = ROOT.kBlack)
-                drawOption = "P2SAME"
-            else:
-                set1Doptions(pfaX2graph, lineWidth = 3, lineColor = ROOT.kRed, markerSize = 4, markerColor = ROOT.kRed) 
-                drawOption = "PSAME"
+        # Draw the uncertainty bands first
+        for band in bands: band.Draw("2SAME")
 
-            iamTextX2.AddText("PFA" + args.pfaX2.split("PFA")[-1].split("_")[0])
-            iamTextX2.SetTextColor(ROOT.kRed)
+        # Then draw the actual graphs on top
+        for graph in graphs: graph.Draw("PSAME")
 
-            pfaX2graph.Draw(drawOption)
-            pfaX2graph.Draw("PSAME")
-            iamTextX2.Draw("SAME")
+        # Finally, draw the text boxes
+        for text in texts: text.Draw("SAME")
 
-        iamTextY = ROOT.TPaveText(0.7, 0.87, 0.8, 0.93, "trNDC"); iamTextY.SetFillColor(ROOT.kWhite); iamTextY.SetTextAlign(12); iamTextY.SetTextFont(63); iamTextY.SetTextSize(90)
-        if "PFAY"  in MAPPFAHISTOS:
-            set1Doptions(pfaYgraph, lineWidth = 3, lineColor = ROOT.kGray+2, markerSize = 4, markerColor = ROOT.kGray+2)
-            iamTextY.AddText("PFA" + args.pfaY.split("PFA")[-1].split("_")[0])
-            iamTextY.SetTextColor(ROOT.kGray+2)
-
-            pfaYgraph.Draw("PSAME")
-            iamTextY.Draw("SAME")
-
-        if i == 0: canvases[i].SaveAs("%s/pfa_res_low.pdf"%(outpath))
-        if i == 1: canvases[i].SaveAs("%s/pfa_res_high.pdf"%(outpath))
+        canvas.SaveAs("%s/pfa_%s.pdf"%(outpath,regime))
