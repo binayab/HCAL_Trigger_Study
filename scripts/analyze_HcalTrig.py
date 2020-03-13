@@ -7,12 +7,18 @@ from algo_weights import pfaWeightsMap
 from Configuration.AlCa.GlobalTag import GlobalTag
 
 if len(sys.argv) < 4:
-    print("An example call to cmsRun: 'cmsRun analyze_HcalTrig.py PFA3p_PER_IETA 50PU 0'")
+    print("An example call to cmsRun: 'cmsRun analyze_HcalTrig.py 0 PFA3p_PER_IETA 50PU'")
     exit()
 
-PFA       = str(sys.argv[2])
-inputFile = str(sys.argv[3])
-job       = str(sys.argv[4])
+job = str(sys.argv[2])
+PFA = str(sys.argv[3])
+
+inputFile = []
+for aFile in sys.argv[4:]: inputFile.append(aFile)
+
+# Only way to pass python list to cms object
+readFiles = cms.untracked.vstring()
+readFiles.extend(inputFile)
 
 isData = "DATA" in inputFile
 
@@ -82,10 +88,34 @@ elif "TTbar_OOT" in inputFile:
         secondaryFileNames = cms.untracked.vstring(),
     )
 
-elif "NuGun_OOT" in inputFile:
+elif "NuGun_25PU_OOT" in inputFile:
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3_50PU/10000/NuGun-DIGI-RAW-50PU_OOT.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-25PU_OOT.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "NuGun_50PU_OOT" in inputFile:
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-50PU_OOT.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "NuGun_75PU_OOT" in inputFile:
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-75PU_OOT.root',
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "NuGun_100PU_OOT" in inputFile:
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-100PU_OOT.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
@@ -108,24 +138,6 @@ elif "TTbar_0PU" in inputFile:
         secondaryFileNames = cms.untracked.vstring(),
     )
 
-elif "TTbar_50PU" in inputFile: 
-    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
-    process.source = cms.Source("PoolSource",
-        fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU_1.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU_2.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-50PU_3.root',
-        ),
-        secondaryFileNames = cms.untracked.vstring(),
-    )
-elif "NuGun_50PU" in inputFile:
-    process.source = cms.Source("PoolSource",
-        fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3_50PU/10000/NuGun-DIGI-RAW-50PU.root',
-        ),
-        secondaryFileNames = cms.untracked.vstring(),
-    )
-
 elif "TimeSlew_NOPU" in inputFile:
     process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
     process.source = cms.Source("PoolSource",
@@ -134,27 +146,10 @@ elif "TimeSlew_NOPU" in inputFile:
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
-elif "TimeSlew_PU" in inputFile:
-    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
-    process.source = cms.Source("PoolSource",
-        fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_1.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_901.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_1801.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_2701.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_3601.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_4501.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_5401.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_6301.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_7201.root',
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_TimeSlew0_v3-v1/10000/TTbar-DIGI-RAW-55to75PU-FixedSlew_8101.root',
-        ),
-        secondaryFileNames = cms.untracked.vstring(),
-    )
 
 else:
     process.source = cms.Source("PoolSource",
-        fileNames = cms.untracked.vstring('%s'%(inputFile),),
+        fileNames = readFiles,
         secondaryFileNames = cms.untracked.vstring(),
     )
 
