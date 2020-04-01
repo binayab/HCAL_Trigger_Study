@@ -18,7 +18,9 @@ args = parser.parse_args()
 USER = os.getenv("USER")
 INPUTLOC = "root://cmseos.fnal.gov///store/user/%s/HCAL_Trigger_Study"%(USER)
 
-output = open("eventMap.py", "w")
+tag = args.pu.split("/")[-1].split(".root")[0]
+
+output = open("eventMap_%s.py"%(tag), "w")
 
 nopu = "%s/%s"%(INPUTLOC,args.nopu)
 pu   = "%s/%s"%(INPUTLOC,args.pu)
