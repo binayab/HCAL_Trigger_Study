@@ -46,13 +46,8 @@ workingDir = "%s/condor/%s"%(SANDBOX,taskStub)
 if not os.path.exists(outputDir):  os.makedirs(outputDir)
 if not os.path.exists(workingDir): os.makedirs(workingDir)
 
-exeFile = "%s/scripts/extraction/%s"%(SANDBOX,exeName); shutil.copy2(exeFile, workingDir)
-
-# For nu-gun case we do not need an event map
-# So do not copy it
-if not arg.nugun:
-    mapFile = "%s/scripts/extraction/pu2nopuMap.py"%(SANDBOX)
-    shutil.copy2(mapFile, workingDir)
+exeFile = "%s/scripts/extraction/%s"%(SANDBOX,exeName);    shutil.copy2(exeFile, workingDir)
+mapFile = "%s/scripts/extraction/pu2nopuMap.py"%(SANDBOX); shutil.copy2(mapFile, workingDir)
 
 if outputDir.split("/")[-1]  == "": outputDir  = outputDir[:-1]
 if workingDir.split("/")[-1] == "": workingDir = workingDir[:-1]
@@ -89,8 +84,7 @@ condorSubmit.write("Output = %s/logs/$(Cluster)_$(Process).stdout\n"%(workingDir
 condorSubmit.write("Error = %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
 condorSubmit.write("Log = %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
 
-if not arg.nugun: condorSubmit.write("Transfer_Input_Files = %s/%s, %s/pu2nopuMap.py\n"%(workingDir,exeName,workingDir))
-else:             condorSubmit.write("Transfer_Input_Files = %s/%s\n"%(workingDir,exeName))
+condorSubmit.write("Transfer_Input_Files = %s/%s, %s/pu2nopuMap.py\n"%(workingDir,exeName,workingDir))
 
 condorSubmit.write("x509userproxy = $ENV(X509_USER_PROXY)\n\n")
 
