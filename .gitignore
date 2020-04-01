@@ -11,3 +11,5 @@ note
 scripts/studies/pu2nopuMap.py
 scripts/analyze_HcalTrig_TEST.py
 **.txt
+**.swp
+docker_stderror
