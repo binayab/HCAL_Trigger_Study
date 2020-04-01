@@ -74,9 +74,33 @@ if "DATA" in inputFile:
             'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/data/Run2018D/JetHT/RAW/v1/000/324/021/00000/9318ED7A-17EB-6644-9DE8-1FF212666945.root', # LS 49 of Run 324021
         ),
         secondaryFileNames = cms.untracked.vstring(),
+#        eventsToProcess = cms.untracked.VEventRange("324021:19599270-324021:19599270"),
+
     )
 
-elif "TTbar_OOT" in inputFile:
+elif "TTbar_NOPU_OOT" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-NOPU123.root',
+    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_25PU_OOT" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT1_106X_25.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT2_106X_25.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT3_106X_25.root',
+    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_50PU_OOT" in inputFile:
     process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
@@ -88,18 +112,92 @@ elif "TTbar_OOT" in inputFile:
         secondaryFileNames = cms.untracked.vstring(),
     )
 
+elif "TTbar_75PU_OOT" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT1_106X_75.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT2_106X_75.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT3_106X_75.root',
+    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_100PU_OOT" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT1_106X_100.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT2_106X_100.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-50PU-OOT3_106X_100.root',
+    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_25PU" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU1_106X_25.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU2_106X_25.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU3_106X_25.root',
+    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_50PU" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU1_106X_50.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU2_106X_50.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU3_106X_50.root',
+
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_75PU" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU1_106X_75.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU2_106X_75.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU3_106X_75.root',
+    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
+elif "TTbar_100PU" in inputFile:
+    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
+    process.source = cms.Source("PoolSource",
+        fileNames = cms.untracked.vstring(
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU1_106X_100.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU2_106X_100.root',
+            'file:///uscmst1b_scratch/lpc1/3DayLifetime/jhiltbra/TTbar-DIGI-RAW-PU3_106X_100.root',
+    
+        ),
+        secondaryFileNames = cms.untracked.vstring(),
+    )
+
 elif "NuGun_25PU_OOT" in inputFile:
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-25PU_OOT.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-25PU_OOT_BX-1.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
+        eventsToProcess = cms.untracked.VEventRange("1:33-1:33"),
+
     )
 
 elif "NuGun_50PU_OOT" in inputFile:
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-50PU_OOT.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-50PU_OOT_BX-1.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
@@ -107,7 +205,7 @@ elif "NuGun_50PU_OOT" in inputFile:
 elif "NuGun_75PU_OOT" in inputFile:
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-75PU_OOT.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-75PU_OOT_BX-1.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
@@ -115,7 +213,7 @@ elif "NuGun_75PU_OOT" in inputFile:
 elif "NuGun_100PU_OOT" in inputFile:
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-100PU_OOT.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_1_patch1/RelValNuGun/GEN-SIM-DIGI-RAW/106X_mcRun3_2021_realistic_v3/10000/NuGun-DIGI-RAW-100PU_OOT_BX-1.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
@@ -124,16 +222,7 @@ elif "TTbar_NOPU" in inputFile:
     process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
     process.source = cms.Source("PoolSource",
         fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-NOPU.root',
-        ),
-        secondaryFileNames = cms.untracked.vstring(),
-    )
-
-elif "TTbar_0PU" in inputFile:
-    process.GlobalTag = GlobalTag(process.GlobalTag, '106X_upgrade2021_realistic_v4', '')
-    process.source = cms.Source("PoolSource",
-        fileNames = cms.untracked.vstring(
-            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1_50PU/20000/TTbar-DIGI-RAW-0PU123.root',
+            'root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/relval/CMSSW_10_6_0_pre4/RelValTTbar_13/GEN-SIM-DIGI-RAW/106X_upgrade2021_realistic_v4-v1/20000/TTbar-DIGI-RAW-NOPU.root',
         ),
         secondaryFileNames = cms.untracked.vstring(),
     )
