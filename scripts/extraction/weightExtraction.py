@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-import sys, os, ROOT, numpy, argparse, math
-from pu2nopuMap import PU2NOPUMAP 
+import sys, os, ROOT, numpy, argparse, math, fnmatch
 from collections import defaultdict
+from pu2nopuMap import PU2NOPUMAP 
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
@@ -66,7 +66,6 @@ class WeightExtractor:
 
         self.weightHistos = {}             # Map ieta,depth,iWeight to 1D histo of said weight 
         self.averagePulseWeights = {}      # Map of depth,ieta,iWeight to weight from average pulses 
-        self.corrHistos = {}               # Map of depth,ieta to w1 vs w2
         self.averagePulseStatErrors = {}   # Maps depth,ieta,TS2 Cut,iWeight to a stat error for the average pulse-derived weight
         self.averagePulseSystErrors = {}   # Maps depth,ieta,iWeight to a syst error for the average pulse-derived weight
         self.fitWeights = {}               # Maps depth,ieta,iWeight to a weight extracted from fit of distribution
@@ -99,16 +98,11 @@ class WeightExtractor:
                             if ieta == 27: self.ietaDensity.setdefault(depth, {}).setdefault(ts2Cut, ROOT.TH1F("depth%d_nTPs_TS2gt%d"%(depth,ts2Cut), "depth%d_nTPs_TS2gt%d"%(depth,ts2Cut), 28, 0.5, 28.5))
 
                         iname = "ieta%d_depth%d"%(ieta,depth)
-                        if self.nWeights > 1:
-                            for ts2Cut in self.ts2Cuts:
-                                tname = iname+"_wcorr_TS2gt%d"%(ts2Cut)
-                                self.corrHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, ROOT.TH2F(tname, tname, 360, -50.0, 50.0, 360, -50.0, 50.0))
-
                         for weight in self.iWeights:
                             wname = iname+"_w%d"%(weight)
                             for ts2Cut in self.ts2Cuts:
                                 tname = wname+"_TS2gt%d"%(ts2Cut)
-                                self.weightHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(weight, {}).setdefault(ts2Cut, ROOT.TH1F(tname, tname, 720, -50.0, 50.0))
+                                self.weightHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(weight, {}).setdefault(ts2Cut, ROOT.TH1F(tname, tname, 7200, -50.0, 50.0))
 
                         for ts2Cut in self.ts2Cuts:
                             tname1 = iname+"_pulsePU_TS2gt%d"%(ts2Cut)
@@ -123,7 +117,7 @@ class WeightExtractor:
         if eventRange[0] == -1 or len(eventRange) == 2: return
 
         # At the beginning, only initialize branches we need.
-        # Hopefully this is speeding up processing
+        # Hopefully this speeds up processing
         self.ttreepu.SetBranchStatus("*", 0)
         self.ttreepu.SetBranchStatus("ieta", 1)
         self.ttreepu.SetBranchStatus("iphi", 1)
@@ -145,15 +139,15 @@ class WeightExtractor:
         for iEvent in eventRange:
 
             puSuccess = self.ttreepu.GetEntry(iEvent)
-            nopuSuccess = self.ttreenopu.GetEntry(PU2NOPUMAP[self.ttreepu.event])
-
-            if self.ttreepu.event != self.ttreenopu.event:
-                print "EVENT MISMATCH, SKIPPING THIS EVENT ENTRY!"
-                continue
-
-            elif puSuccess == 0 or nopuSuccess == 0:
+            if puSuccess == 0:
                 print "Could not get entry %d!"%(iEvent)
-                continue
+                break
+
+            if self.nopuUsed:
+                self.ttreenopu.GetEntry(PU2NOPUMAP[self.ttreepu.event])
+                if self.ttreepu.event != self.ttreenopu.event:
+                    print "EVENT MISMATCH, SKIPPING THIS EVENT ENTRY!"
+                    continue
 
             self.event = self.ttreepu.event
 
@@ -168,12 +162,11 @@ class WeightExtractor:
                 # Due to ordering once we hit HF ieta stop looping!
                 if abs(ieta) > 28: break 
 
-                # Always kill all-0 8TS
-                if self.ttreepu.ts0[iTP] + self.ttreepu.ts1[iTP] + self.ttreepu.ts2[iTP]\
-                 + self.ttreepu.ts3[iTP] + self.ttreepu.ts4[iTP] + self.ttreepu.ts5[iTP]\
-                 + self.ttreepu.ts6[iTP] + self.ttreepu.ts7[iTP] < 1: continue
+                # Always kill 8TS with 0 in TS3
+                if self.ttreepu.ts3[iTP] == 0: continue
 
                 if self.nopuUsed:
+
                     for jTP in xrange(hotStart, len(self.ttreenopu.ieta)):
                         jeta = self.ttreenopu.ieta[jTP]
                         jphi = self.ttreenopu.iphi[jTP]
@@ -182,10 +175,8 @@ class WeightExtractor:
                         # Due to ordering once we hit HF ieta stop looping! 
                         if abs(jeta) > 28: break 
 
-                        # Always kill all-0 8TS
-                        elif self.ttreenopu.ts0[jTP] + self.ttreenopu.ts1[jTP] + self.ttreenopu.ts2[jTP]\
-                           + self.ttreenopu.ts3[jTP] + self.ttreenopu.ts4[jTP] + self.ttreenopu.ts5[jTP]\
-                           + self.ttreenopu.ts6[jTP] + self.ttreenopu.ts7[jTP] < 1: continue
+                        # Always kill 8TS with 0 in TS3, we want physics here!
+                        elif self.ttreenopu.ts3[jTP] == 0: continue
 
                         # If we passed in depth then there was no match; break the inner loop and go back to outer loop
                         elif jdepth > idepth:
@@ -212,8 +203,8 @@ class WeightExtractor:
                                 elif jphi == iphi:
 
                                     # We are here so we must have found a match!
-                                    print "category   PU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]"%(self.ttreepu.event, ieta, iphi, idepth, self.ttreepu.ts0[iTP], self.ttreepu.ts1[iTP],self.ttreepu.ts2[iTP],self.ttreepu.ts3[iTP],self.ttreepu.ts4[iTP],self.ttreepu.ts5[iTP],self.ttreepu.ts6[iTP],self.ttreepu.ts7[iTP])
-                                    print "category NOPU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]\n"%(self.ttreenopu.event, jeta, jphi, jdepth, self.ttreenopu.ts0[jTP], self.ttreenopu.ts1[jTP],self.ttreenopu.ts2[jTP],self.ttreenopu.ts3[jTP],self.ttreenopu.ts4[jTP],self.ttreenopu.ts5[jTP],self.ttreenopu.ts6[jTP],self.ttreenopu.ts7[jTP])
+                                    #print "category   PU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]"%(self.ttreepu.event, ieta, iphi, idepth, self.ttreepu.ts0[iTP], self.ttreepu.ts1[iTP],self.ttreepu.ts2[iTP],self.ttreepu.ts3[iTP],self.ttreepu.ts4[iTP],self.ttreepu.ts5[iTP],self.ttreepu.ts6[iTP],self.ttreepu.ts7[iTP])
+                                    #print "category NOPU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]\n"%(self.ttreenopu.event, jeta, jphi, jdepth, self.ttreenopu.ts0[jTP], self.ttreenopu.ts1[jTP],self.ttreenopu.ts2[jTP],self.ttreenopu.ts3[jTP],self.ttreenopu.ts4[jTP],self.ttreenopu.ts5[jTP],self.ttreenopu.ts6[jTP],self.ttreenopu.ts7[jTP])
 
                                     puPulse    = numpy.zeros((8,1));    nopuPulse    = numpy.zeros((8,1))
                                     puPulse[0] = self.ttreepu.ts0[iTP]; nopuPulse[0] = self.ttreenopu.ts0[jTP]
@@ -241,17 +232,14 @@ class WeightExtractor:
                                             
                                             for ts in self.iWeights: self.weightHistos[idepth][abs(ieta)][ts][ts2Cut].Fill(weights[ts-1])
     
-                                            if self.nWeights > 1: self.corrHistos[idepth][abs(ieta)][ts2Cut].Fill(weights[0], weights[1])
-
                                     hotStart = jTP
                                     break
 
                 # If we hit this else the we are looking at nugun with no input nopu file
                 else:
     
-                    
                     # We are here so we must have found a match!
-                    print "category   PU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]"%(self.ttreepu.event, ieta, iphi, idepth, self.ttreepu.ts0[iTP], self.ttreepu.ts1[iTP],self.ttreepu.ts2[iTP],self.ttreepu.ts3[iTP],self.ttreepu.ts4[iTP],self.ttreepu.ts5[iTP],self.ttreepu.ts6[iTP],self.ttreepu.ts7[iTP])
+                    #print "category   PU | event %s | ieta %d | iphi %d | depth %d | 8TS [%d, %d, %d, %d, %d, %d, %d, %d]"%(self.ttreepu.event, ieta, iphi, idepth, self.ttreepu.ts0[iTP], self.ttreepu.ts1[iTP],self.ttreepu.ts2[iTP],self.ttreepu.ts3[iTP],self.ttreepu.ts4[iTP],self.ttreepu.ts5[iTP],self.ttreepu.ts6[iTP],self.ttreepu.ts7[iTP])
 
                     puPulse    = numpy.zeros((8,1))
                     nopuPulse  = numpy.zeros((8,1))
@@ -280,8 +268,6 @@ class WeightExtractor:
                             
                             for ts in self.iWeights: self.weightHistos[idepth][abs(ieta)][ts][ts2Cut].Fill(weights[ts-1])
     
-                            if self.nWeights > 1: self.corrHistos[idepth][abs(ieta)][ts2Cut].Fill(weights[0], weights[1])
-
             print "Processed event %d => %d..."%(iEvent,eventRange[-1])
         
         # At the very end of the event loop, write the histograms to the cache file
@@ -303,8 +289,6 @@ class WeightExtractor:
                         self.pulseShapesPU[depth][ieta][ts2Cut].Write(self.pulseShapesPU[depth][ieta][ts2Cut].GetName())
 
                         if self.nopuUsed: self.pulseShapesNOPU[depth][ieta][ts2Cut].Write(self.pulseShapesNOPU[depth][ieta][ts2Cut].GetName())
-
-                        if self.nWeights > 1: self.corrHistos[depth][ieta][ts2Cut].Write(self.corrHistos[depth][ieta][ts2Cut].GetName())
 
                         for iWeight in self.iWeights:
                             self.weightHistos[depth][ieta][iWeight][ts2Cut].Write(self.weightHistos[depth][ieta][iWeight][ts2Cut].GetName())
@@ -329,11 +313,7 @@ class WeightExtractor:
                 obj = key.ReadObj(); obj.SetDirectory(0)
                 keyName = str(key.GetName()); chunks = keyName.split("_")
 
-                if "wcorr" in keyName:
-                    ieta = int(chunks[0].split("ieta")[1]); depth = int(chunks[1].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1])
-                    self.corrHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(ts2Cut, obj)
-
-                elif "w" in keyName:
+                if fnmatch.fnmatch(keyName, "*_w?_*"):
                     ieta = int(chunks[0].split("ieta")[1]); depth = int(chunks[1].split("depth")[1]); ts2Cut = int(chunks[-1].split("TS2gt")[1]); weight = int(chunks[-2].split("w")[1])
                     self.weightHistos.setdefault(depth, {}).setdefault(ieta, {}).setdefault(weight, {}).setdefault(ts2Cut, obj)
 
@@ -478,46 +458,6 @@ class WeightExtractor:
                         if not os.path.exists(outPath): os.makedirs(outPath)
                         canvas.SaveAs(outPath + "/AveragePulse.pdf")
 
-    # Method for drawing histogram of correlation between wSOI-1 and wSOI-2
-    def drawWeightCorrs(self):
-
-        for subdet, ietaMap in self.HBHEMap.iteritems():
-            for ieta, depths in ietaMap.iteritems():
-                for depth in depths:
-
-                    if self.withDepth and depth == 0 or not self.withDepth and depth > 0: continue
-
-                    histo = self.corrHistos[depth][ieta][self.ts2Cut]
-
-                    # No need to print out empty plot (for ieta, depth that don't exist...)
-                    if histo.Integral() == 0: continue
-
-                    cname = "c_i%d_d%d_wcorr"%(ieta,depth)
-                    canvas = ROOT.TCanvas(cname, cname, 2400, 2400); canvas.cd()
-                    ROOT.gPad.SetLeftMargin(0.12)
-                    ROOT.gPad.SetRightMargin(0.13)
-
-                    histo.SetContour(255)
-                    histo.RebinX(3); histo.RebinY(3)
-                    theTitle = "|i#eta| = %d"%(ieta)
-                    if depth != 0: theTitle += ", Depth = %d"%(depth)
-                    histo.SetTitle(theTitle)
-                    histo.GetYaxis().SetTitle("w_{SOI-1}")
-                    histo.GetYaxis().SetRangeUser(-20,20)
-                    histo.GetXaxis().SetTitle("w_{SOI-2}")
-                    histo.GetXaxis().SetRangeUser(-20,20)
-
-                    histo.GetYaxis().SetLabelSize(0.039); histo.GetYaxis().SetTitleSize(0.051); histo.GetYaxis().SetTitleOffset(1.18)
-                    histo.GetXaxis().SetTitleSize(0.051); histo.GetXaxis().SetTitleOffset(0.9)
-                    histo.GetXaxis().SetLabelSize(0.039)
-                    histo.Draw("COLZ")
-
-                    canvas.SetLogz(); canvas.SetGridx(); canvas.SetGridy()
-
-                    outPath = "%s/Fits/ieta%d/depth%d"%(self.outPath,ieta,depth)
-                    if not os.path.exists(outPath): os.makedirs(outPath)
-                    canvas.SaveAs(outPath + "/WeightCorrelation.pdf")
-
     # Method for drawing histogram of an extracted weight with its fit
     def drawWeightHisto(self, ieta, depth, iWeight, rebin, ts2Cut, rebinHistos, rebinFits, rebinFitWeights, rebinFitStatErrors, theFitSystError, rebinMeanWeights, rebinMeanStatErrors, theMeanSystError):
 
@@ -563,16 +503,17 @@ class WeightExtractor:
 
         someText = ROOT.TPaveText(0.21, 0.62, 0.56, 0.86, "trNDC")
 
-        someText.AddText("Peak = %3.2f_{ #pm %3.2f (stat.)}^{ #pm %3.2f (syst.)}"%(fitWeight,fitStatError,fitSystError))
-        someText.AddText("Mean = %3.2f_{ #pm %3.2f (stat.)}^{ #pm %3.2f (syst.)}"%(meanWeight,meanStatError,meanSystError))
-        someText.AddText("#chi^{2} / ndf = %3.2f / %d"%(histoFit.GetChisquare(), histoFit.GetNDF()))
+        #someText.AddText("Peak = %3.2f_{ #pm %3.2f (stat.)}^{ #pm %3.2f (syst.)}"%(fitWeight,fitStatError,fitSystError))
+        someText.AddText("Mean = %3.2f"%(meanWeight))
+        someText.AddText("RMS = %3.2f"%(meanStatError))
+        #someText.AddText("#chi^{2} / ndf = %3.2f / %d"%(histoFit.GetChisquare(), histoFit.GetNDF()))
         someText.AddText("Entries = %d"%(weightHisto.GetEntries()))
-        someText.SetTextAlign(31)
+        someText.SetTextAlign(12)
         someText.SetTextSize(0.035)
         someText.SetFillColor(ROOT.kWhite);
 
         weightHisto.Draw("HIST")
-        histoFit.Draw("SAME")
+        #histoFit.Draw("SAME")
         someText.Draw("SAME")
         ietaText.Draw("SAME")
     
@@ -670,7 +611,7 @@ class WeightExtractor:
                                 # Get the weight from the simple mean of the distribution
                                 # The stat error here is the simple stddev / number of entries
                                 rebinMeanWeights[rebin] = rHisto.GetMean() 
-                                rebinMeanStatErrors[rebin] = rHisto.GetStdDev() / math.sqrt(numEntries)
+                                rebinMeanStatErrors[rebin] = rHisto.GetStdDev()
 
                             # From the five different fits of the histogram determine the standard dev of the weights 
                             theFitWeight = rebinFitWeights[self.rebin]; theFitStatError = rebinFitStatErrors[self.rebin]
@@ -928,6 +869,10 @@ if __name__ == '__main__':
     # Intend for things to work inside sandbox environment
     HOME = os.getenv("HOME")
     USER = os.getenv("USER")
+
+    # If for some reason the USER is not defined default to author's
+    if USER == None: USER = "jhiltb"
+
     SANDBOX = HOME + "/nobackup/HCAL_Trigger_Study"
     INPUTLOC = "root://cmseos.fnal.gov//store/user/%s/HCAL_Trigger_Study/WeightExtraction"%(USER)
 
@@ -983,4 +928,3 @@ if __name__ == '__main__':
 
         theExtractor.drawPulseShapes("PU")
         if not args.nugun: theExtractor.drawPulseShapes("NOPU")
-        theExtractor.drawWeightCorrs()
