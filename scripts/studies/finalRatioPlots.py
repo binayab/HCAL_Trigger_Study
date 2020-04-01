@@ -6,6 +6,7 @@
 # Here the subpath is assumed to start in nobackup/HCAL_Trigger_Study/input/Ratios/
 
 import sys, os, ROOT, argparse
+from toolbox import *
 
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
@@ -14,71 +15,6 @@ ROOT.gStyle.SetOptStat("")
 ROOT.gStyle.SetPaintTextFormat("3.2f")
 ROOT.gStyle.SetFrameLineWidth(2)
 ROOT.gStyle.SetEndErrorSize(0)
-
-# The makeBandGraph method takes three TH1s where histoUp and histoDown
-# would make an envelope around histoNominal. An optional color for the 
-# band is passable
-def makeBandGraph(histoUp, histoDown, histoNominal, color):
-    
-    npoints = histoUp.GetNbinsX()
-
-    graphBand = ROOT.TGraphAsymmErrors(npoints)
-
-    for iPoint in xrange(0, npoints):
-
-        upErr = histoUp.GetBinContent(iPoint+1) - histoNominal.GetBinContent(iPoint+1)
-        downErr = histoNominal.GetBinContent(iPoint+1) - histoDown.GetBinContent(iPoint+1)
-
-        if iPoint == 28:
-            graphBand.SetPoint(iPoint,      histoNominal.GetBinCenter(iPoint+1),       (histoNominal.GetBinContent(iPoint)+histoNominal.GetBinContent(iPoint+2))/2)
-            graphBand.SetPointError(iPoint, histoNominal.GetBinWidth(1)/2, histoNominal.GetBinWidth(1)/2, 0, 0)
-
-        graphBand.SetPoint(iPoint, histoNominal.GetBinCenter(iPoint+1), histoNominal.GetBinContent(iPoint+1))
-        graphBand.SetPointError(iPoint, histoNominal.GetBinWidth(1)/2, histoNominal.GetBinWidth(1)/2, downErr, upErr)
-
-    graphBand.SetFillColorAlpha(color, 1.0)
-
-    return graphBand
-
-# A little helper function to set axis label, title sizes and offsets
-def setAxisDims(histo, xLabelSize, yLabelSize, zLabelSize, xTitleSize, yTitleSize, zTitleSize, xOffset, yOffset, zOffset):
-
-    histo.GetXaxis().SetLabelSize(xLabelSize); histo.GetXaxis().SetTitleSize(xTitleSize); histo.GetXaxis().SetTitleOffset(xOffset)
-    histo.GetYaxis().SetLabelSize(yLabelSize); histo.GetYaxis().SetTitleSize(yTitleSize); histo.GetYaxis().SetTitleOffset(yOffset)
-    
-    try:
-        histo.GetZaxis().SetLabelSize(zLabelSize); histo.GetZaxis().SetTitleSize(zTitleSize); histo.GetZaxis().SetTitleOffset(zOffset)
-    except:
-        return
-
-# A helper function to set all three axis ranges
-def setAxisRanges(histo, xMin = -1, xMax = -1, yMin = -1, yMax = -1, zMin = -1, zMax = -1):
-
-    if xMin != xMax: histo.GetXaxis().SetRangeUser(xMin, xMax)
-    if yMin != yMax: histo.GetYaxis().SetRangeUser(yMin, yMax)
-    if zMin != zMax: histo.GetZaxis().SetRangeUser(zMin, zMax)
-
-# A function to set some TH1 options
-def set1Doptions(histo, fillColor = -1, lineColor = ROOT.kBlack, markerColor = ROOT.kBlack, lineStyle = 1, markerStyle = 20, lineWidth = 5, markerSize = 3, normalize = False):
-
-    histo.SetLineColor(lineColor)
-    histo.SetLineStyle(lineStyle)
-    histo.SetLineWidth(lineWidth)
-
-    histo.SetMarkerColor(markerColor)
-    histo.SetMarkerStyle(markerStyle)
-    histo.SetMarkerSize(markerSize)
-
-    if fillColor != -1: histo.SetFillColor(fillColor)
-
-    if normalize: histo.Scale(1.0/histo.Integral())
-
-# A function to set some TH2 options
-def set2Doptions(histo, contour = 255):
-
-    if "TH2" not in histo.ClassName(): return
-
-    histo.SetContour(255)
 
 # Take a TPaveText box and customize it accordingly
 def prettyText(text, color, algoName, mean, stddev):
@@ -121,24 +57,6 @@ def fillMap(pfaKey, inRootDir):
 
                MAPPFAHISTOS[pfaKey][name] = histo
 
-# Using the nominal histogram and its up and down variation, create an error band
-def getUncertaintyBand(histo, histoUp, histoDown, fillColor):
-
-    gPFAXBand = 0
-    if histoUp != 0 and histoDown != 0:
-
-        pPFAX     = histo.ProfileX("p_%s_%d_ub"%(histo.GetName(),histo.GetUniqueID()), 1, -1, "");             pPFAX.Sumw2()
-        pPFAXUp   = histoUp.ProfileX("p_%s_%d_ub"%(histoUp.GetName(),histoUp.GetUniqueID()), 1, -1, "");       pPFAXUp.Sumw2()
-        pPFAXDown = histoDown.ProfileX("p_%s_%d_ub"%(histoDown.GetName(),histoDown.GetUniqueID()), 1, -1, ""); pPFAXDown.Sumw2()
-
-        gPFAXBand = makeBandGraph(pPFAXUp, pPFAXDown, pPFAX, fillColor)
-
-        set1Doptions(gPFAXBand, lineWidth = 3, lineColor = fillColor, markerColor = fillColor, markerSize = 0)
-           
-        if gPFAXBand: ROOT.SetOwnership(gPFAXBand, False)
-
-    return gPFAXBand
-
 # The method for 1D histos is the draw1DHisto method. Here the 1D histogram
 # is prettied up and added to a THStack. In addition, we use parameters of the 1D
 # histogram to make a custom TPaveText and return it.
@@ -161,6 +79,21 @@ def draw1DHisto(theStack, histo, histoUp, histoDown, color, markerStyle):
 
     return stddev, stddevUp, stddevDown, mean
 
+def getPFAname(aString):
+
+    PFAname = ""
+    scoreSplit = aString.split("_")
+
+    for sub in scoreSplit:
+    
+        if "PFA" in sub:
+            
+            slashSplit = sub.split("/")
+            PFAname = slashSplit[-1]
+            return PFAname
+    
+    return PFAname
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -169,9 +102,13 @@ if __name__ == '__main__':
     parser.add_argument("--pfaX1"    , dest="pfaX1"    , type=str, default="NULL", help="Subpath to other PFAX dir") 
     parser.add_argument("--pfaX2"    , dest="pfaX2"    , type=str, default="NULL", help="Subpath to other PFAX dir") 
     parser.add_argument("--pfaX3"    , dest="pfaX3"    , type=str, default="NULL", help="Subpath to other PFAX dir") 
+    parser.add_argument("--pfaX4"    , dest="pfaX4"    , type=str, default="NULL", help="Subpath to other PFAX dir") 
+    parser.add_argument("--pfaX5"    , dest="pfaX5"    , type=str, default="NULL", help="Subpath to other PFAX dir") 
     parser.add_argument("--pfaX1Err" , dest="pfaX1Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
     parser.add_argument("--pfaX2Err" , dest="pfaX2Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
     parser.add_argument("--pfaX3Err" , dest="pfaX3Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
+    parser.add_argument("--pfaX4Err" , dest="pfaX4Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
+    parser.add_argument("--pfaX5Err" , dest="pfaX5Err" , default=False, action="store_true", help="Draw error bands for PFAX") 
     args = parser.parse_args()
 
     tag = args.tag
@@ -184,18 +121,22 @@ if __name__ == '__main__':
     OUTBASE  = "%s/nobackup/HCAL_Trigger_Study/plots/Ratios"%(HOME)
     INPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Ratios"%(HOME)
 
+    # For TPRH profiles in order pfaX1, pfaX2 etc.
+    colors = [ROOT.kBlack, ROOT.kRed, ROOT.kBlue+1, ROOT.kMagenta+1, ROOT.kGray-1]
+    #colors = [ROOT.TColor.GetColor("#cbc9e2"), ROOT.TColor.GetColor("#9e9ac8"), ROOT.TColor.GetColor("#756bb1"), ROOT.TColor.GetColor("#54278f"), ROOT.kGray+3]
+
     # The only place we hard code the options is here. This will allow us to set colors of histo lines
     # markers, fill etc.
     if args.pfaX1 != "NULL":
         stub = args.pfaX1.split("Ratios/")[-1]
         schemeMap.setdefault("PFAX1", {}).setdefault("path", args.pfaX1)
-        schemeMap["PFAX1"]["scheme"] = "PFA" + args.pfaX1.split("PFA")[-1].split("_")[0]
-        schemeMap["PFAX1"]["mcolor"] = ROOT.kBlack
-        schemeMap["PFAX1"]["lcolor"] = ROOT.kBlack
+        schemeMap["PFAX1"]["scheme"] = getPFAname(args.pfaX1)
+        schemeMap["PFAX1"]["mcolor"] = colors[0]
+        schemeMap["PFAX1"]["lcolor"] = colors[0]
         schemeMap["PFAX1"]["bmcolor"] = ROOT.kBlack
         schemeMap["PFAX1"]["blcolor"] = ROOT.kBlack
         schemeMap["PFAX1"]["fcolor"] = ROOT.kRed
-        schemeMap["PFAX1"]["style"] = 20
+        schemeMap["PFAX1"]["style"] = 20 
         schemeMap["PFAX1"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
         schemeMap["PFAX1"]["resHigh"] = ROOT.TGraphAsymmErrors(28) 
         schemeMap["PFAX1"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
@@ -213,9 +154,9 @@ if __name__ == '__main__':
     if args.pfaX2 != "NULL":
         stub = args.pfaX2.split("Ratios/")[-1]
         schemeMap.setdefault("PFAX2", {}).setdefault("path", args.pfaX2)
-        schemeMap["PFAX2"]["scheme"] = "PFA" + args.pfaX2.split("PFA")[-1].split("_")[0]
-        schemeMap["PFAX2"]["mcolor"] = ROOT.kRed
-        schemeMap["PFAX2"]["lcolor"] = ROOT.kRed
+        schemeMap["PFAX2"]["scheme"] = getPFAname(args.pfaX2)
+        schemeMap["PFAX2"]["mcolor"] = colors[1]
+        schemeMap["PFAX2"]["lcolor"] = colors[1]
         schemeMap["PFAX2"]["bmcolor"] = ROOT.kBlack
         schemeMap["PFAX2"]["blcolor"] = ROOT.kBlack
         schemeMap["PFAX2"]["fcolor"] = ROOT.kGray+2
@@ -237,13 +178,13 @@ if __name__ == '__main__':
     if args.pfaX3 != "NULL":
         stub = args.pfaX3.split("Ratios/")[-1]
         schemeMap.setdefault("PFAX3", {}).setdefault("path", args.pfaX3)
-        schemeMap["PFAX3"]["scheme"] = "PFA" + args.pfaX3.split("PFA")[-1].split("_")[0]
-        schemeMap["PFAX3"]["mcolor"] = ROOT.kBlue+1
-        schemeMap["PFAX3"]["lcolor"] = ROOT.kBlue+1
-        schemeMap["PFAX3"]["bmcolor"] = ROOT.kBlue+1
-        schemeMap["PFAX3"]["blcolor"] = ROOT.kBlue+1
-        schemeMap["PFAX3"]["fcolor"] = ROOT.kBlue+1
-        schemeMap["PFAX3"]["style"] = 20
+        schemeMap["PFAX3"]["scheme"] = getPFAname(args.pfaX3)
+        schemeMap["PFAX3"]["mcolor"] = colors[1]
+        schemeMap["PFAX3"]["lcolor"] = colors[1]
+        schemeMap["PFAX3"]["bmcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX3"]["blcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX3"]["fcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX3"]["style"] = 20 
         schemeMap["PFAX3"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
         schemeMap["PFAX3"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
         schemeMap["PFAX3"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
@@ -258,10 +199,58 @@ if __name__ == '__main__':
         else:
             schemeMap["PFAX3"]["error"] = False
 
+    if args.pfaX4 != "NULL":
+        stub = args.pfaX4.split("Ratios/")[-1]
+        schemeMap.setdefault("PFAX4", {}).setdefault("path", args.pfaX4)
+        schemeMap["PFAX4"]["scheme"] = getPFAname(args.pfaX4)
+        schemeMap["PFAX4"]["mcolor"] = colors[0]
+        schemeMap["PFAX4"]["lcolor"] = colors[0]
+        schemeMap["PFAX4"]["bmcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX4"]["blcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX4"]["fcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX4"]["style"] = 4 
+        schemeMap["PFAX4"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX4"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAX4"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX4"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+
+        fillMap("PFAX4", INPUTLOC + "/" + args.pfaX4)
+
+        if args.pfaX4Err:              
+            fillMap("PFAX4Up"  , INPUTLOC + "/" + args.pfaX4 + "_UP"  )
+            fillMap("PFAX4Down", INPUTLOC + "/" + args.pfaX4 + "_DOWN")
+            schemeMap["PFAX4"]["error"] = True 
+        else:
+            schemeMap["PFAX4"]["error"] = False
+
+    if args.pfaX5 != "NULL":
+        stub = args.pfaX5.split("Ratios/")[-1]
+        schemeMap.setdefault("PFAX5", {}).setdefault("path", args.pfaX5)
+        schemeMap["PFAX5"]["scheme"] = getPFAname(args.pfaX5)
+        schemeMap["PFAX5"]["mcolor"] = colors[4] 
+        schemeMap["PFAX5"]["lcolor"] = colors[4] 
+        schemeMap["PFAX5"]["bmcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX5"]["blcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX5"]["fcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX5"]["style"] = 20
+        schemeMap["PFAX5"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX5"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAX5"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX5"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+
+        fillMap("PFAX5", INPUTLOC + "/" + args.pfaX5)
+
+        if args.pfaX5Err:              
+            fillMap("PFAX5Up"  , INPUTLOC + "/" + args.pfaX5 + "_UP"  )
+            fillMap("PFAX5Down", INPUTLOC + "/" + args.pfaX5 + "_DOWN")
+            schemeMap["PFAX5"]["error"] = True 
+        else:
+            schemeMap["PFAX5"]["error"] = False
+
     if args.pfaY != "NULL":
         stub = args.pfaY.split("Ratios/")[-1]
         schemeMap.setdefault("PFAY", {}).setdefault("path", args.pfaY)
-        schemeMap["PFAY"]["scheme"] = "PFA" + args.pfaY.split("PFA")[-1].split("_")[0]
+        schemeMap["PFAY"]["scheme"] = getPFAname(args.pfaY)
         schemeMap["PFAY"]["mcolor"] = ROOT.kGray+2
         schemeMap["PFAY"]["lcolor"] = ROOT.kGray+2
         schemeMap["PFAY"]["fcolor"] = ROOT.kGray+2
@@ -276,7 +265,7 @@ if __name__ == '__main__':
         schemeMap["PFAY"]["error"] = False
 
     # Set up the output directory and make it if it does not exist
-    outpath = "%s/%s/%s"%(OUTBASE,stub,tag)
+    outpath = "%s/%s/%s"%(OUTBASE,tag,stub)
     if not os.path.exists(outpath): os.makedirs(outpath)
 
     # Use a dummy histo to draw the TGraphAsymmErrors on later
@@ -394,8 +383,8 @@ if __name__ == '__main__':
             else:
                 ietaStr = "%s"%(ietaList[0])
 
-            etBinLow  = "RHET0.0to10.0"  in name and "TPRH" in name and "TPETgt0.5" in name
-            etBinHigh = ("RHET10.0to1000" in name or "RHET10.0toInf" in name) and "TPRH" in name and "TPETgt0.5" in name
+            etBinLow  = "RHET0.0to10.0"  in name and "TPRH" in name and "TPETgt0.5" in name and "peak" in name
+            etBinHigh = ("RHET10.0to1000" in name or "RHET10.0toInf" in name) and "TPRH" in name and "TPETgt0.5" in name and "peak" in name
 
             textYstart = 0.85; textYinc = 0.18
             textXstart = 0.75
@@ -467,7 +456,7 @@ if __name__ == '__main__':
        
         pfaResHistDummy.Draw("")
 
-        textYstart = 0.93; textXstart = 0.8
+        textYstart = 0.93; textXstart = 0.9; textYinc = 0.09
         graphs = []; bands = []; texts = []
         for scheme, options in schemeMap.iteritems():
 
@@ -491,7 +480,7 @@ if __name__ == '__main__':
                     graphs.append(options[regime])
                     bands.append(options[regime+"Band"])
 
-                #textYstart -= 0.09
+                textYstart -= textYinc 
 
         # Draw the uncertainty bands first
         for band in bands: band.Draw("2SAME")
