@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import ROOT, sys, numpy
+import ROOT, sys, os, numpy, argparse
 from array import array
 
 ROOT.gROOT.SetBatch(True)
@@ -30,69 +30,101 @@ def getAverageWeights(argv):
 
     return wavearr, wstdarr
 
-def parseFile(f):
+def fillMap(infile, m, topKey):
 
-    line = f.readline()
-
-    weights = array('d')
-    errors = array('d') 
+    line = infile.readline()
     
-    count = 0
     while line:
 
-        if "&" not in line or "HB" in line or "HE1" in line or "HE2" in line:
-            line = f.readline()
+        line = line.rstrip()
+
+        if "ieta" not in line:
+            line = infile.readline()
             continue
 
-        linesplit = [x.strip() for x in line.split(' & ')]
+        ieta   = "NULL"
+        depth  = "NULL"
+        weight = "NULL"
+        stat   = "NULL"
+        syst   = "NULL"
+        rms    = "NULL"
 
-        ieta = float(linesplit[0])
+        linesplit = [x.strip() for x in line.split(',')]
 
-        weightAndError = linesplit[1].strip("$").split("_")
+        for chunk in linesplit:
+            if   "ieta"   in chunk: ieta = chunk.split("ieta")[-1]
+            elif "depth"  in chunk: depth = chunk.split("depth")[-1]
+            elif "weight" in chunk: weight = chunk.split("weight")[-1]
+            elif "stat"   in chunk: stat = chunk.split("stat")[-1]
+            elif "syst"   in chunk: syst = chunk.split("syst")[-1]
+            elif "rms"    in chunk: rms = chunk.split("rms")[-1]
 
-        weight = float(weightAndError[0])
-        error  = float(weightAndError[1].strip("{\pm ").split("}")[0])
+        try:
+            m.setdefault(topKey, {}).setdefault(int(ieta), {}).setdefault(int(depth), {}).setdefault("Weight", float(weight))
+            m.setdefault(topKey, {}).setdefault(int(ieta), {}).setdefault(int(depth), {}).setdefault("RMS", float(rms))
+        except:
+            print "Ignoring parameter combination: %s, %s, %s"%(ieta, depth, weight)
 
-        weights.append(weight); errors.append(error)
-        count += 1
-        line = f.readline()
+        line = infile.readline()
 
-    return weights, errors
+def getWeightInfo(m):
 
-tttag = "TTbar"; nutag = "NuGun"
-ttpaths = []; nupaths = []
-ttweights = []; nuweights = []
-tterrors = []; nuerrors = []
-ttgraphs = []; nugraphs = []
-xVals = []
-nupaths.append("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/NoDepth_NuGun_25PU_OOT/weightSummaryMean.txt")
-nupaths.append("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/NoDepth_NuGun_50PU_OOT/weightSummaryMean.txt")  
-nupaths.append("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/NoDepth_NuGun_75PU_OOT/weightSummaryMean.txt")  
-nupaths.append("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/NoDepth_NuGun_100PU_OOT/weightSummaryMean.txt") 
+    ttweights = {"25" : array('d'), "50" : array('d'), "75" : array('d'), "100" : array('d')}; nuweights = {"25" : array('d'), "50" : array('d'), "75" : array('d'), "100" : array('d')}
+    ttrms     = {"25" : array('d'), "50" : array('d'), "75" : array('d'), "100" : array('d')}; nurms     = {"25" : array('d'), "50" : array('d'), "75" : array('d'), "100" : array('d')}
 
-ttpaths.append("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/NoDepth_TTbar_25PU_OOT/weightSummaryMean.txt")
-ttpaths.append("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/NoDepth_TTbar_50PU_OOT/weightSummaryMean.txt")  
-ttpaths.append("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/NoDepth_TTbar_75PU_OOT/weightSummaryMean.txt")  
-ttpaths.append("/uscms/home/jhiltb/nobackup/HCAL_Trigger_Study/plots/Weights/PFA1p/NoDepth_TTbar_100PU_OOT/weightSummaryMean.txt") 
+    for ieta in xrange(1,29):
+       for pu in xrange(25,125,25):
+            
+            ttweights[str(pu)].append(m["TTbar%d"%(pu)][ieta][0]["Weight"])
+            ttrms[str(pu)].append(m["TTbar%d"%(pu)][ieta][0]["RMS"])
 
-for path in ttpaths:
+            nuweights[str(pu)].append(m["NuGun%d"%(pu)][ieta][0]["Weight"])
+            nurms[str(pu)].append(m["NuGun%d"%(pu)][ieta][0]["RMS"])
+      
+    return ttweights, ttrms, nuweights, nurms
 
-    f = open(path, "r")
-    y, yerr = parseFile(f)
-    f.close()
+parser = argparse.ArgumentParser()
+parser.add_argument("--tag", dest="tag", help="Custom tag for output", type=str, required=True)
+args = parser.parse_args()
 
-    ttweights.append(y); tterrors.append(yerr)
+USER = os.getenv("USER")
 
-for path in nupaths:
+mapEverything = {}
 
-    f = open(path, "r")
-    y, yerr = parseFile(f)
-    f.close()
+ttgraphs = {"25" : [], "50" : [], "75" : [], "100" : []}; nugraphs = {"25" : [], "50" : [], "75" : [], "100" : []} 
+xVals = {"25" : array('d'), "50" : array('d'), "75" : array('d'), "100" : array('d')} 
 
-    nuweights.append(y); nuerrors.append(yerr)
+pfa_25PU_nugun =  "/uscms/home/%s/nobackup/HCAL_Trigger_Study/plots/Weights/%s/NoDepth_NuGun_25PU_OOT/weightSummaryMean.txt"%(USER,args.tag)
+pfa_50PU_nugun =  "/uscms/home/%s/nobackup/HCAL_Trigger_Study/plots/Weights/%s/NoDepth_NuGun_50PU_OOT/weightSummaryMean.txt"%(USER,args.tag)
+pfa_75PU_nugun =  "/uscms/home/%s/nobackup/HCAL_Trigger_Study/plots/Weights/%s/NoDepth_NuGun_75PU_OOT/weightSummaryMean.txt"%(USER,args.tag)
+pfa_100PU_nugun = "/uscms/home/%s/nobackup/HCAL_Trigger_Study/plots/Weights/%s/NoDepth_NuGun_100PU_OOT/weightSummaryMean.txt"%(USER,args.tag)
 
-ttaveweights, ttstd = getAverageWeights(ttweights)
-nuaveweights, nustd = getAverageWeights(nuweights)
+pfa_25PU_ttbar =  "/uscms/home/%s/nobackup/HCAL_Trigger_Study/plots/Weights/%s/NoDepth_TTbar_25PU_OOT/weightSummaryMean.txt"%(USER,args.tag)
+pfa_50PU_ttbar =  "/uscms/home/%s/nobackup/HCAL_Trigger_Study/plots/Weights/%s/NoDepth_TTbar_50PU_OOT/weightSummaryMean.txt"%(USER,args.tag)
+pfa_75PU_ttbar =  "/uscms/home/%s/nobackup/HCAL_Trigger_Study/plots/Weights/%s/NoDepth_TTbar_75PU_OOT/weightSummaryMean.txt"%(USER,args.tag)
+pfa_100PU_ttbar = "/uscms/home/%s/nobackup/HCAL_Trigger_Study/plots/Weights/%s/NoDepth_TTbar_100PU_OOT/weightSummaryMean.txt"%(USER,args.tag)
+
+pfa_tt25 = open(pfa_25PU_ttbar, "r")
+pfa_tt50 = open(pfa_50PU_ttbar, "r")
+pfa_tt75 = open(pfa_75PU_ttbar, "r")
+pfa_tt100 = open(pfa_100PU_ttbar, "r")
+
+pfa_nu25 = open(pfa_25PU_nugun, "r")
+pfa_nu50 = open(pfa_50PU_nugun, "r")
+pfa_nu75 = open(pfa_75PU_nugun, "r")
+pfa_nu100 = open(pfa_100PU_nugun, "r")
+
+fillMap(pfa_tt25, mapEverything, "TTbar25")
+fillMap(pfa_tt50, mapEverything, "TTbar50")
+fillMap(pfa_tt75, mapEverything, "TTbar75")
+fillMap(pfa_tt100, mapEverything, "TTbar100")
+
+fillMap(pfa_nu25, mapEverything, "NuGun25")
+fillMap(pfa_nu50, mapEverything, "NuGun50")
+fillMap(pfa_nu75, mapEverything, "NuGun75")
+fillMap(pfa_nu100, mapEverything, "NuGun100")
+
+ttweights, ttrms, nuweights, nurms = getWeightInfo(mapEverything)
 
 ttx = array('d')
 nux = array('d')
@@ -109,45 +141,37 @@ for i in xrange(1, 29):
     ietaWidth.append(0.08333333)
     ieta0Width.append(0)
 
-xVals.append(x25); xVals.append(x50); xVals.append(x75); xVals.append(x100)
-ttavegraph = ROOT.TGraphErrors(28, ttx, ttaveweights, ieta0Width, ttstd)
-nuavegraph = ROOT.TGraphErrors(28, nux, nuaveweights, ieta0Width, nustd)
+xVals["25"] = x25; xVals["50"] = x50; xVals["75"] = x75; xVals["100"] = x100
 
-for i in xrange(len(ttweights)): ttgraphs.append(ROOT.TGraphErrors(28, xVals[i], ttweights[i],  ietaWidth, tterrors[i]))
-for i in xrange(len(nuweights)): nugraphs.append(ROOT.TGraphErrors(28, xVals[i], nuweights[i],  ietaWidth, nuerrors[i]))
+for pu in xVals.keys(): ttgraphs[pu] = ROOT.TGraphErrors(28, xVals[pu], ttweights[pu],  ietaWidth, ttrms[pu])
+for pu in xVals.keys(): nugraphs[pu] = ROOT.TGraphErrors(28, xVals[pu], nuweights[pu],  ietaWidth, nurms[pu])
 
-#ttcolors = [ROOT.TColor.GetColor("#a6cee3"), ROOT.TColor.GetColor("#b2df8a"), ROOT.TColor.GetColor("#cab2d6"), ROOT.TColor.GetColor("#fb9a99")]
-#nucolors = [ROOT.TColor.GetColor("#1f78b4"), ROOT.TColor.GetColor("#33a02c"), ROOT.TColor.GetColor("#6a3d9a"), ROOT.TColor.GetColor("#e31a1c")]
+#ttcolors = {"25" : ROOT.TColor.GetColor("#9ecae1"), "50" : ROOT.TColor.GetColor("#6baed6"), "75" : ROOT.TColor.GetColor("#2171b5"), "100" : ROOT.TColor.GetColor("#08306b")}
+#nucolors = {"25" : ROOT.TColor.GetColor("#a1d99b"), "50" : ROOT.TColor.GetColor("#74c476"), "75" : ROOT.TColor.GetColor("#238b45"), "100" : ROOT.TColor.GetColor("#00441b")}
 
-ttcolors = [ROOT.TColor.GetColor("#9ecae1"), ROOT.TColor.GetColor("#6baed6"), ROOT.TColor.GetColor("#2171b5"), ROOT.TColor.GetColor("#08306b")]
-nucolors = [ROOT.TColor.GetColor("#a1d99b"), ROOT.TColor.GetColor("#74c476"), ROOT.TColor.GetColor("#238b45"), ROOT.TColor.GetColor("#00441b")]
+ttcolors = {"25" : ROOT.TColor.GetColor("#bdd7e7"), "50" : ROOT.TColor.GetColor("#6baed6"), "75" : ROOT.TColor.GetColor("#3182bd"), "100" : ROOT.TColor.GetColor("#08519c")}
+nucolors = {"25" : ROOT.TColor.GetColor("#bae4b3"), "50" : ROOT.TColor.GetColor("#74c476"), "75" : ROOT.TColor.GetColor("#31a354"), "100" : ROOT.TColor.GetColor("#006d2c")}
 
 width = 0
 size  = 2
 ttstyle = 20
 nustyle = 22
 
-ttavegraph.SetLineColor(ROOT.kBlack); ttavegraph.SetMarkerColor(ROOT.kBlack); ttavegraph.SetLineWidth(2); ttavegraph.SetMarkerSize(2); ttavegraph.SetMarkerStyle(20)
-nuavegraph.SetLineColor(ROOT.kOrange+8); nuavegraph.SetMarkerColor(ROOT.kOrange+8); nuavegraph.SetLineWidth(2); nuavegraph.SetMarkerSize(2); nuavegraph.SetMarkerStyle(22)
+for pu in ttgraphs.keys():
+    ttgraphs[pu].SetLineColor(ttcolors[pu])
+    ttgraphs[pu].SetMarkerColor(ttcolors[pu])
+    ttgraphs[pu].SetFillColorAlpha(ttcolors[pu],0.15)
+    ttgraphs[pu].SetLineWidth(width)
+    ttgraphs[pu].SetMarkerSize(size)
+    ttgraphs[pu].SetMarkerStyle(ttstyle)
+    ttgraphs[pu].SetLineStyle(3)
 
-for graph in ttgraphs:
-    index = ttgraphs.index(graph)
-    graph.SetLineColor(ttcolors[index])
-    graph.SetMarkerColor(ttcolors[index])
-    graph.SetFillColorAlpha(ttcolors[index],0.15)
-    graph.SetLineWidth(width)
-    graph.SetMarkerSize(size)
-    graph.SetMarkerStyle(ttstyle)
-    graph.SetLineStyle(3)
-
-for graph in nugraphs:
-    index = nugraphs.index(graph)
-    graph.SetLineColor(nucolors[index])
-    graph.SetFillColorAlpha(nucolors[index],0.15)
-    graph.SetMarkerColor(nucolors[index])
-    graph.SetLineWidth(width)
-    graph.SetMarkerSize(size)
-    graph.SetMarkerStyle(nustyle)
+    nugraphs[pu].SetLineColor(nucolors[pu])
+    nugraphs[pu].SetFillColorAlpha(nucolors[pu],0.15)
+    nugraphs[pu].SetMarkerColor(nucolors[pu])
+    nugraphs[pu].SetLineWidth(width)
+    nugraphs[pu].SetMarkerSize(size)
+    nugraphs[pu].SetMarkerStyle(nustyle)
 
 dummy = ROOT.TH1F("h", ";;w_{SOI-1}", 168, 0.5, 28.5)
 dummy.GetYaxis().SetRangeUser(-1.7,0.7)
@@ -159,13 +183,15 @@ masterLab = 0.055; masterTitle = 0.095
 pad1 = 0.6; pad2 = 0.15; pad3 = 0.25
 
 dummyZoom1 = ROOT.TH1F("hZoom1", ";;", 168, 0.5, 28.5)
-dummyZoom1.GetYaxis().SetRangeUser(-0.67,-0.35)
+if args.tag == "PFA1p": dummyZoom1.GetYaxis().SetRangeUser(-0.67,-0.35)
+else:                   dummyZoom1.GetYaxis().SetRangeUser(-1.54,-0.41)
 dummyZoom1.GetYaxis().SetLabelSize(masterLab/(pad2/0.6)); dummyZoom1.GetYaxis().SetTitleSize(masterTitle/(pad2/0.6)); dummyZoom1.GetYaxis().SetTitleOffset(0.9)
 dummyZoom1.GetXaxis().SetLabelSize(masterLab/(pad2/0.6)); dummyZoom1.GetXaxis().SetTitleSize(masterTitle/(pad2/0.6)); dummyZoom1.GetXaxis().SetTitleOffset(0.9)
 dummyZoom1.SetLineWidth(0)
 
 dummyZoom2 = ROOT.TH1F("hZoom2", ";|i#eta|;", 168, 0.5, 28.5)
-dummyZoom2.GetYaxis().SetRangeUser(-0.65,-0.25)
+if args.tag == "PFA1p": dummyZoom2.GetYaxis().SetRangeUser(-0.65,-0.25)
+else:                   dummyZoom2.GetYaxis().SetRangeUser(-1.49,-0.41)
 dummyZoom2.GetYaxis().SetLabelSize(masterLab/(pad3/0.6)); dummyZoom2.GetYaxis().SetTitleSize(masterTitle/(pad3/0.6)); dummyZoom2.GetYaxis().SetTitleOffset(0.9)
 dummyZoom2.GetXaxis().SetLabelSize(masterLab/(pad3/0.6)); dummyZoom2.GetXaxis().SetTitleSize(masterTitle/(pad3/0.6)); dummyZoom2.GetXaxis().SetTitleOffset(0.6)
 dummyZoom2.SetLineWidth(0)
@@ -195,14 +221,14 @@ ROOT.gPad.SetLeftMargin(0.08)
 c.cd(1)
 ROOT.gPad.SetPad(0,0.4,1,1)
 dummy.Draw()
-for graph in ttgraphs:
+for pu, graph in ttgraphs.iteritems():
     graph.Draw("2SAME")
     graph.Draw("2SAME")
-for graph in nugraphs:
-    graph.Draw("2SAME")
-    graph.Draw("2SAME")
-for graph in ttgraphs: graph.Draw("XEP SAME")
-for graph in nugraphs: graph.Draw("XEP SAME")
+    nugraphs[pu].Draw("2SAME")
+    nugraphs[pu].Draw("2SAME")
+for pu, graph in ttgraphs.iteritems():
+    graph.Draw("XEP SAME")
+    nugraphs[pu].Draw("XEP SAME")
 
 c.cd(2)
 ROOT.gPad.SetGridx()
@@ -211,7 +237,7 @@ ROOT.gPad.SetPad(0,0.25,1,0.4)
 
 dummyZoom1.GetYaxis().SetNdivisions(6,5,0)
 dummyZoom1.Draw()
-for graph in ttgraphs:
+for pu, graph in ttgraphs.iteritems():
     graph.Draw("2SAME")
     graph.Draw("XP SAME")
 
@@ -222,8 +248,8 @@ ROOT.gPad.SetPad(0,0.0,1,0.25)
 
 dummyZoom2.GetYaxis().SetNdivisions(6,5,0)
 dummyZoom2.Draw()
-for graph in nugraphs:
+for pu, graph in nugraphs.iteritems():
     graph.Draw("2SAME")
     graph.Draw("XP SAME")
 
-c.SaveAs("weightsPlot.pdf")
+c.SaveAs("weightsPlot_%s.pdf"%(args.tag))
