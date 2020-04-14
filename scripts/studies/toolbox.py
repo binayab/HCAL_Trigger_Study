@@ -1,10 +1,14 @@
-import ROOT
+import ROOT, random, string
 
 ROOT.gROOT.SetBatch(True)
 ROOT.gStyle.SetOptStat("")
 ROOT.TH1.SetDefaultSumw2()
 ROOT.TH2.SetDefaultSumw2()
 ROOT.TH3.SetDefaultSumw2()
+
+def randomString():
+    randStr = ''.join([random.choice(string.ascii_letters + string.digits) for n in xrange(8)])
+    return randStr
 
 # In ROOT's infinite wisdom, when a ProfileY is taken
 # things are mapped back to the x axis
@@ -32,8 +36,7 @@ def remapProfile(profile):
 # And use that to construct a new profile of the std devs
 def stdDevProfile(profile):
 
-    stddevProf = ROOT.TH1F(profile.GetName()+"_std", "", profile.GetNbinsX(), profile.GetXaxis().GetBinLowEdge(1), profile.GetXaxis().GetBinUpEdge(profile.GetNbinsX()))
-    stddevProf.SetDirectory(0); ROOT.SetOwnership(stddevProf, False)
+    stddevProf = ROOT.TH1F(profile.GetName()+"_std", "", profile.GetNbinsX(), profile.GetXaxis().GetBinLowEdge(1), profile.GetXaxis().GetBinUpEdge(profile.GetNbinsX())); stddevProf.SetDirectory(0); ROOT.SetOwnership(stddevProf, False)
 
     for xbin in xrange(1, profile.GetNbinsX()+1): stddevProf.SetBinContent(xbin, profile.GetBinError(xbin))
 
@@ -142,19 +145,19 @@ def getUncertaintyBand(histo, histoUp, histoDown, fillColor):
 # Variables, labels, and cut are specified by the user
 def makeNDhisto(evtsTree, variables, ranges, labels, cut):
 
-    h = 0
+    h = 0; hName = "h_%s_%s"%(evtsTree.GetTitle(), randomString())
     if len(variables) == 3:
-        h = ROOT.TH3F("h3", ";%s;%s;%s"%(labels[0], labels[1], labels[2]), ranges[0], ranges[1], ranges[2], ranges[3], ranges[4], ranges[5], ranges[6], ranges[7], ranges[8])
-        evtsTree.Draw("%s:%s:%s>>h3"%(variables[2],variables[1],variables[0]), cut)
-        h = ROOT.gDirectory.Get("h3")
+        h = ROOT.TH3F(hName, ";%s;%s;%s"%(labels[0], labels[1], labels[2]), ranges[0], ranges[1], ranges[2], ranges[3], ranges[4], ranges[5], ranges[6], ranges[7], ranges[8])
+        evtsTree.Draw("%s:%s:%s>>%s"%(variables[2],variables[1],variables[0],hName), cut)
+        h = ROOT.gDirectory.Get(hName)
     elif len(variables) == 2:
-        h = ROOT.TH2F("h2", ";%s;%s"%(labels[0], labels[1]), ranges[0], ranges[1], ranges[2], ranges[3], ranges[4], ranges[5])
-        evtsTree.Draw("%s:%s>>h2"%(variables[1],variables[0]), cut)
-        h = ROOT.gDirectory.Get("h2")
+        h = ROOT.TH2F(hName, ";%s;%s"%(labels[0], labels[1]), ranges[0], ranges[1], ranges[2], ranges[3], ranges[4], ranges[5])
+        evtsTree.Draw("%s:%s>>%s"%(variables[1],variables[0],hName), cut)
+        h = ROOT.gDirectory.Get(hName)
     elif len(variables) == 1:
-        h = ROOT.TH1F("h1", ";%s"%(labels[0]), ranges[0], ranges[1], ranges[2])
-        evtsTree.Draw("%s>>h1"%(variables[0]), cut)
-        h = ROOT.gDirectory.Get("h1")
+        h = ROOT.TH1F(hName, ";%s"%(labels[0]), ranges[0], ranges[1], ranges[2])
+        evtsTree.Draw("%s>>%s"%(variables[0],hName), cut)
+        h = ROOT.gDirectory.Get(hName)
 
     return h
 
@@ -167,21 +170,21 @@ def make1Dhisto(histo, axisRange, varNames, tag, write = True):
     h = 0
     # Two separate ranges must have been specified
     if len(axisRange) > 3:
-        htempp = histo.Clone(histo.GetName()+"_pos"); htempn = histo.Clone(histo.GetName()+"_neg")
+        htempp = histo.Clone(histo.GetName()+"_pos_%s"%(randomString())); htempn = histo.Clone(histo.GetName()+"_neg_%s"%(randomString()))
         if   axisRange[0] == "Y":
-            hp = htempp.ProjectionX(htempp.GetName()+"_%s%0.1fto%0.1f_projX"%(axisRange[0],axisRange[1],axisRange[2]),htempp.GetYaxis().FindBin(axisRange[1]),htempp.GetYaxis().FindBin(axisRange[2]))
-            hn = htempn.ProjectionX(htempn.GetName()+"_%s%0.1fto%0.1f_projX"%(axisRange[0],axisRange[1],axisRange[2]),htempn.GetYaxis().FindBin(axisRange[3]),htempn.GetYaxis().FindBin(axisRange[4]))
+            hp = htempp.ProjectionX(htempp.GetName()+"_%s%0.1fto%0.1f_projX_%s"%(axisRange[0],axisRange[1],axisRange[2],randomString()),htempp.GetYaxis().FindBin(axisRange[1]),htempp.GetYaxis().FindBin(axisRange[2]))
+            hn = htempn.ProjectionX(htempn.GetName()+"_%s%0.1fto%0.1f_projX_%s"%(axisRange[0],axisRange[1],axisRange[2],randomString()),htempn.GetYaxis().FindBin(axisRange[3]),htempn.GetYaxis().FindBin(axisRange[4]))
         elif axisRange[0] == "X":
-            hp = htempp.ProjectionY(htempp.GetName()+"_%s%0.1fto%0.1f_projY"%(axisRange[0],axisRange[1],axisRange[2]),htempp.GetXaxis().FindBin(axisRange[1]),htempp.GetXaxis().FindBin(axisRange[2]))
-            hn = htempn.ProjectionY(htempn.GetName()+"_%s%0.1fto%0.1f_projY"%(axisRange[0],axisRange[1],axisRange[2]),htempn.GetXaxis().FindBin(axisRange[3]),htempn.GetXaxis().FindBin(axisRange[4]))
+            hp = htempp.ProjectionY(htempp.GetName()+"_%s%0.1fto%0.1f_projY_%s"%(axisRange[0],axisRange[1],axisRange[2],randomString()),htempp.GetXaxis().FindBin(axisRange[1]),htempp.GetXaxis().FindBin(axisRange[2]))
+            hn = htempn.ProjectionY(htempn.GetName()+"_%s%0.1fto%0.1f_projY_%s"%(axisRange[0],axisRange[1],axisRange[2],randomString()),htempn.GetXaxis().FindBin(axisRange[3]),htempn.GetXaxis().FindBin(axisRange[4]))
 
         h = hn; hn.Add(hp)
 
     # Just one range of the variable to project out
     else:
         htemp = histo.Clone(histo.GetName()+"_clone")
-        if   axisRange[0] == "Y": h = htemp.ProjectionX(htemp.GetName()+"_projX", htemp.GetYaxis().FindBin(axisRange[1]),htemp.GetYaxis().FindBin(axisRange[2]))
-        elif axisRange[0] == "X": h = htemp.ProjectionY(htemp.GetName()+"_projY", htemp.GetXaxis().FindBin(axisRange[1]),htemp.GetXaxis().FindBin(axisRange[2]))
+        if   axisRange[0] == "Y": h = htemp.ProjectionX(htemp.GetName()+"_projX_%s"%(randomString()), htemp.GetYaxis().FindBin(axisRange[1]),htemp.GetYaxis().FindBin(axisRange[2]))
+        elif axisRange[0] == "X": h = htemp.ProjectionY(htemp.GetName()+"_projY_%s"%(randomString()), htemp.GetXaxis().FindBin(axisRange[1]),htemp.GetXaxis().FindBin(axisRange[2]))
 
     name = "%s_%s"%(varNames[1], varNames[0])
     h.SetName("%s%0.1fto%0.1f%s"%(name, axisRange[1], axisRange[2], tag))
@@ -197,7 +200,7 @@ def make2Dhisto(histo, axisRange, varNames, write = True):
     h = 0
     # Two separate ranges must have been specified
     if len(axisRange) > 3:
-        htempp = histo.Clone(histo.GetName()+"%s%0.1fto%0.1f_pos"%(axisRange[0],axisRange[1],axisRange[2])); htempn = histo.Clone(histo.GetName()+"%s%0.1fto0.1%f_neg"%(axisRange[0],axisRange[1],axisRange[2]))
+        htempp = histo.Clone(histo.GetName()+"%s%0.1fto%0.1f_pos_%s"%(axisRange[0],axisRange[1],axisRange[2],randomString())); htempn = histo.Clone(histo.GetName()+"%s%0.1fto0.1%f_neg_%s"%(axisRange[0],axisRange[1],axisRange[2],randomString()))
         if   axisRange[0] == "X":
             htempp.GetXaxis().SetRange(htempp.Getxaxis().FindBin(axisRange[1]),htempp.GetXaxis().FindBin(axisRange[2]))
             htempn.GetXaxis().SetRange(htempn.Getxaxis().FindBin(axisRange[3]),htempn.GetXaxis().FindBin(axisRange[4]))
@@ -218,7 +221,7 @@ def make2Dhisto(histo, axisRange, varNames, write = True):
 
     # Just one range of the variable to project out
     else:
-        htemp = histo.Clone(histo.GetName()+"%s%fto%f_clone"%(axisRange[0],axisRange[1],axisRange[2]))
+        htemp = histo.Clone(histo.GetName()+"%s%fto%f_clone_%s"%(axisRange[0],axisRange[1],axisRange[2],randomString()))
         if   axisRange[0] == "X":
             htemp.GetXaxis().SetRange(htemp.GetXaxis().FindBin(axisRange[1]),htemp.GetXaxis().FindBin(axisRange[2]))
             htemp.GetXaxis().SetBit(ROOT.TAxis.kAxisRange)
