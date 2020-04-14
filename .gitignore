@@ -2,6 +2,7 @@ condor
 **.root
 **.pyc
 **.pdf
+**.tex
 input
 cmssw
 plots
