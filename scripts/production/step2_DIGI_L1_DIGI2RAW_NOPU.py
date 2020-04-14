@@ -20,7 +20,6 @@ process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.Digi_cff')
 process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('Configuration.StandardSequences.DigiToRaw_cff')
-process.load('HLTrigger.Configuration.HLT_Fake2_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
@@ -28,7 +27,9 @@ process.maxEvents = cms.untracked.PSet(
     input = cms.untracked.int32(-1)
 )
 
-process.RandomNumberGeneratorService.generator.initialSeed = int(seed)
+process.RandomNumberGeneratorService.generator.initialSeed = seed
+process.RandomNumberGeneratorService.g4SimHits.initialSeed = seed + 527
+process.RandomNumberGeneratorService.VtxSmeared.initialSeed = seed + 725
 
 # Input source
 process.source = cms.Source("PoolSource",
@@ -71,13 +72,13 @@ process.configurationMetadata = cms.untracked.PSet(
 
 # Output definition
 
-process.FEVTDEBUGHLToutput = cms.OutputModule("PoolOutputModule",
+process.RAWoutput = cms.OutputModule("PoolOutputModule",
     dataset = cms.untracked.PSet(
-        dataTier = cms.untracked.string('GEN-SIM-DIGI-RAW'),
+        dataTier = cms.untracked.string('RAW'),
         filterName = cms.untracked.string('')
     ),
     fileName = cms.untracked.string('file:step2.root'),
-    outputCommands = process.FEVTDEBUGHLTEventContent.outputCommands,
+    outputCommands = process.RAWEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0)
 )
 
@@ -93,26 +94,13 @@ process.digitisation_step = cms.Path(process.pdigi_valid)
 process.L1simulation_step = cms.Path(process.SimL1Emulator)
 process.digi2raw_step = cms.Path(process.DigiToRaw)
 process.endjob_step = cms.EndPath(process.endOfProcess)
-process.FEVTDEBUGHLToutput_step = cms.EndPath(process.FEVTDEBUGHLToutput)
+process.RAWoutput_step = cms.EndPath(process.RAWoutput)
 
 # Schedule definition
 process.schedule = cms.Schedule(process.digitisation_step,process.L1simulation_step,process.digi2raw_step)
-process.schedule.extend(process.HLTSchedule)
-process.schedule.extend([process.endjob_step,process.FEVTDEBUGHLToutput_step])
+process.schedule.extend([process.endjob_step,process.RAWoutput_step])
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
-
-# customisation of the process.
-
-# Automatic addition of the customisation function from HLTrigger.Configuration.customizeHLTforMC
-from HLTrigger.Configuration.customizeHLTforMC import customizeHLTforMC 
-
-#call to customisation function customizeHLTforMC imported from HLTrigger.Configuration.customizeHLTforMC
-process = customizeHLTforMC(process)
-
-# End of customisation functions
-
-# Customisation from command line
 
 # Add early deletion of temporary data products to reduce peak memory need
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
