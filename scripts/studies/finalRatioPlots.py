@@ -60,15 +60,10 @@ def fillMap(pfaKey, inRootDir):
 # The method for 1D histos is the draw1DHisto method. Here the 1D histogram
 # is prettied up and added to a THStack. In addition, we use parameters of the 1D
 # histogram to make a custom TPaveText and return it.
-def draw1DHisto(theStack, histo, histoUp, histoDown, color, markerStyle):
+def draw1DHisto(theStack, histo, color, markerStyle):
 
     mean   = histo.GetMean()
     stddev = histo.GetStdDev()
-
-    stddevUp = 0.; stddevDown = 0.;
-    if histoUp != 0 and histoDown != 0:
-        stddevUp = histoUp.GetStdDev()
-        stddevDown = histoDown.GetStdDev()
 
     setAxisDims(histo, 0.042, 0.042, 0.042, 0.052, 0.052, 0.052, 1.06, 1.2, 1.0)
     set1Doptions(histo, lineColor = color, markerStyle = markerStyle, markerSize = 0, normalize = True)
@@ -77,7 +72,7 @@ def draw1DHisto(theStack, histo, histoUp, histoDown, color, markerStyle):
     theStack.GetXaxis().SetTitle(histo.GetXaxis().GetTitle())
     theStack.GetYaxis().SetTitle(histo.GetYaxis().GetTitle())
 
-    return stddev, stddevUp, stddevDown, mean
+    return stddev, mean
 
 def getPFAname(aString):
 
@@ -122,7 +117,7 @@ if __name__ == '__main__':
     INPUTLOC = "%s/nobackup/HCAL_Trigger_Study/input/Ratios"%(HOME)
 
     # For TPRH profiles in order pfaX1, pfaX2 etc.
-    colors = [ROOT.kBlack, ROOT.kRed, ROOT.kBlue+1, ROOT.kMagenta+1, ROOT.kGray-1]
+    colors = [ROOT.kRed, ROOT.kBlack, ROOT.kBlue+1, ROOT.kMagenta+1, ROOT.kGray-1]
     #colors = [ROOT.TColor.GetColor("#cbc9e2"), ROOT.TColor.GetColor("#9e9ac8"), ROOT.TColor.GetColor("#756bb1"), ROOT.TColor.GetColor("#54278f"), ROOT.kGray+3]
 
     # The only place we hard code the options is here. This will allow us to set colors of histo lines
@@ -132,15 +127,14 @@ if __name__ == '__main__':
         schemeMap.setdefault("PFAX1", {}).setdefault("path", args.pfaX1)
         schemeMap["PFAX1"]["scheme"] = getPFAname(args.pfaX1)
         schemeMap["PFAX1"]["mcolor"] = colors[0]
-        schemeMap["PFAX1"]["lcolor"] = colors[0]
         schemeMap["PFAX1"]["bmcolor"] = ROOT.kBlack
-        schemeMap["PFAX1"]["blcolor"] = ROOT.kBlack
         schemeMap["PFAX1"]["fcolor"] = ROOT.kRed
+        schemeMap["PFAX1"]["rcolor"] = colors[0]
         schemeMap["PFAX1"]["style"] = 20 
-        schemeMap["PFAX1"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX1"]["resHigh"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX1"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX1"]["resHighBand"] = ROOT.TGraphAsymmErrors(28) 
+        schemeMap["PFAX1"]["resLow"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX1"]["resHigh"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX1"]["resLowBand"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX1"]["resHighBand"] = ROOT.TGraphAsymmErrors(57) 
 
         fillMap("PFAX1", INPUTLOC + "/" + args.pfaX1)
 
@@ -156,15 +150,14 @@ if __name__ == '__main__':
         schemeMap.setdefault("PFAX2", {}).setdefault("path", args.pfaX2)
         schemeMap["PFAX2"]["scheme"] = getPFAname(args.pfaX2)
         schemeMap["PFAX2"]["mcolor"] = colors[1]
-        schemeMap["PFAX2"]["lcolor"] = colors[1]
         schemeMap["PFAX2"]["bmcolor"] = ROOT.kBlack
-        schemeMap["PFAX2"]["blcolor"] = ROOT.kBlack
         schemeMap["PFAX2"]["fcolor"] = ROOT.kGray+2
+        schemeMap["PFAX2"]["rcolor"] = colors[1] 
         schemeMap["PFAX2"]["style"] = 20
-        schemeMap["PFAX2"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX2"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
-        schemeMap["PFAX2"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX2"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAX2"]["resLow"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX2"]["resHigh"] = ROOT.TGraphAsymmErrors(57)
+        schemeMap["PFAX2"]["resLowBand"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX2"]["resHighBand"] = ROOT.TGraphAsymmErrors(57)
 
         fillMap("PFAX2", INPUTLOC + "/" + args.pfaX2)
 
@@ -180,15 +173,14 @@ if __name__ == '__main__':
         schemeMap.setdefault("PFAX3", {}).setdefault("path", args.pfaX3)
         schemeMap["PFAX3"]["scheme"] = getPFAname(args.pfaX3)
         schemeMap["PFAX3"]["mcolor"] = colors[1]
-        schemeMap["PFAX3"]["lcolor"] = colors[1]
         schemeMap["PFAX3"]["bmcolor"] = ROOT.kMagenta+1
-        schemeMap["PFAX3"]["blcolor"] = ROOT.kMagenta+1
         schemeMap["PFAX3"]["fcolor"] = ROOT.kMagenta+1
-        schemeMap["PFAX3"]["style"] = 20 
-        schemeMap["PFAX3"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX3"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
-        schemeMap["PFAX3"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX3"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAX3"]["rcolor"] = ROOT.kGray+1
+        schemeMap["PFAX3"]["style"] = 4 
+        schemeMap["PFAX3"]["resLow"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX3"]["resHigh"] = ROOT.TGraphAsymmErrors(57)
+        schemeMap["PFAX3"]["resLowBand"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX3"]["resHighBand"] = ROOT.TGraphAsymmErrors(57)
 
         fillMap("PFAX3", INPUTLOC + "/" + args.pfaX3)
 
@@ -203,16 +195,15 @@ if __name__ == '__main__':
         stub = args.pfaX4.split("Ratios/")[-1]
         schemeMap.setdefault("PFAX4", {}).setdefault("path", args.pfaX4)
         schemeMap["PFAX4"]["scheme"] = getPFAname(args.pfaX4)
-        schemeMap["PFAX4"]["mcolor"] = colors[0]
-        schemeMap["PFAX4"]["lcolor"] = colors[0]
+        schemeMap["PFAX4"]["mcolor"] = colors[1]
         schemeMap["PFAX4"]["bmcolor"] = ROOT.kMagenta+1
-        schemeMap["PFAX4"]["blcolor"] = ROOT.kMagenta+1
         schemeMap["PFAX4"]["fcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX4"]["rcolor"] = ROOT.kGray+1
         schemeMap["PFAX4"]["style"] = 4 
-        schemeMap["PFAX4"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX4"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
-        schemeMap["PFAX4"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX4"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAX4"]["resLow"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX4"]["resHigh"] = ROOT.TGraphAsymmErrors(57)
+        schemeMap["PFAX4"]["resLowBand"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX4"]["resHighBand"] = ROOT.TGraphAsymmErrors(57)
 
         fillMap("PFAX4", INPUTLOC + "/" + args.pfaX4)
 
@@ -228,15 +219,14 @@ if __name__ == '__main__':
         schemeMap.setdefault("PFAX5", {}).setdefault("path", args.pfaX5)
         schemeMap["PFAX5"]["scheme"] = getPFAname(args.pfaX5)
         schemeMap["PFAX5"]["mcolor"] = colors[4] 
-        schemeMap["PFAX5"]["lcolor"] = colors[4] 
         schemeMap["PFAX5"]["bmcolor"] = ROOT.kMagenta+1
-        schemeMap["PFAX5"]["blcolor"] = ROOT.kMagenta+1
         schemeMap["PFAX5"]["fcolor"] = ROOT.kMagenta+1
+        schemeMap["PFAX5"]["rcolor"] = ROOT.kGray+1
         schemeMap["PFAX5"]["style"] = 20
-        schemeMap["PFAX5"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX5"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
-        schemeMap["PFAX5"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAX5"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAX5"]["resLow"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX5"]["resHigh"] = ROOT.TGraphAsymmErrors(57)
+        schemeMap["PFAX5"]["resLowBand"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAX5"]["resHighBand"] = ROOT.TGraphAsymmErrors(57)
 
         fillMap("PFAX5", INPUTLOC + "/" + args.pfaX5)
 
@@ -251,25 +241,27 @@ if __name__ == '__main__':
         stub = args.pfaY.split("Ratios/")[-1]
         schemeMap.setdefault("PFAY", {}).setdefault("path", args.pfaY)
         schemeMap["PFAY"]["scheme"] = getPFAname(args.pfaY)
-        schemeMap["PFAY"]["mcolor"] = ROOT.kGray+2
-        schemeMap["PFAY"]["lcolor"] = ROOT.kGray+2
-        schemeMap["PFAY"]["fcolor"] = ROOT.kGray+2
-        schemeMap["PFAY"]["style"] = 4 
-        schemeMap["PFAY"]["resLow"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAY"]["resHigh"] = ROOT.TGraphAsymmErrors(28)
-        schemeMap["PFAY"]["resLowBand"] = ROOT.TGraphAsymmErrors(28) 
-        schemeMap["PFAY"]["resHighBand"] = ROOT.TGraphAsymmErrors(28)
+        schemeMap["PFAY"]["mcolor"] = ROOT.kBlack
+        schemeMap["PFAY"]["fcolor"] = ROOT.kBlack
+        schemeMap["PFAY"]["rcolor"] = ROOT.kGray+2
+        schemeMap["PFAY"]["style"] = 24 
+        schemeMap["PFAY"]["resLow"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAY"]["resHigh"] = ROOT.TGraphAsymmErrors(57)
+        schemeMap["PFAY"]["resLowBand"] = ROOT.TGraphAsymmErrors(57) 
+        schemeMap["PFAY"]["resHighBand"] = ROOT.TGraphAsymmErrors(57)
 
         fillMap("PFAY" , INPUTLOC + "/" + args.pfaY)
 
         schemeMap["PFAY"]["error"] = False
 
+    stub = "/".join(stub.split("/")[:-1])
+
     # Set up the output directory and make it if it does not exist
-    outpath = "%s/%s/%s"%(OUTBASE,tag,stub)
+    outpath = "%s/%s/%s"%(OUTBASE,stub,tag)
     if not os.path.exists(outpath): os.makedirs(outpath)
 
     # Use a dummy histo to draw the TGraphAsymmErrors on later
-    pfaResHistDummy  = ROOT.TH1F("pfaResHistDummy", ";|i#eta|;#sigma(online / offline)", 28, 0.5, 28.5)
+    pfaResHistDummy  = ROOT.TH1F("pfaResHistDummy", ";i#eta;#sigma#left(E_{T,TP} / E_{T,RH}#right)", 57, -28.5, 28.5)
     setAxisDims(pfaResHistDummy, 0.059, 0.059, 0.059, 0.072, 0.072, 0.072, 0.85, 0.85, 1.0)
     setAxisRanges(pfaResHistDummy, yMin = 0.0, yMax = 0.7)
 
@@ -318,6 +310,45 @@ if __name__ == '__main__':
                 # Very careful now, take the profile before cutting off the y range!
                 profile = hPFA.ProfileX("p_%s_%d"%(hPFA.GetName(),hPFA.GetUniqueID()), 1, -1, ""); ROOT.SetOwnership(profile, False); profile.Sumw2()
 
+                # Fill resolution graphs
+                etBinLow  = "RHET0.0to10.0"  in name and "TPRH" in name and "TPETgt0.5" in name and name[-5:] == "_peak"
+                etBinHigh = ("RHET10.0to1000" in name or "RHET10.0toInf" in name) and "TPRH" in name and "TPETgt0.5" in name and name[-5:] == "_peak"
+
+                # Skip all this if we are not guaranteed to be getting resolution
+                if etBinLow or etBinHigh:
+                    profResUp = 0; profResDown = 0
+                    profRes = hPFA.ProfileX("p_%s_%d_res"%(hPFA.GetName(),hPFA.GetUniqueID()), 1, -1, "s"); profRes.Sumw2()
+                    if options["error"]:
+                        profResUp   = hPFAUp.ProfileX("p_%s_%d_resUp"%(hPFAUp.GetName(),hPFAUp.GetUniqueID()), 1, -1, "s"); profResUp.Sumw2()
+                        profResDown = hPFADown.ProfileX("p_%s_%d_resDown"%(hPFADown.GetName(),hPFADown.GetUniqueID()), 1, -1, "s"); profResDown.Sumw2()
+
+                    for x in xrange(1, profRes.GetNbinsX()+1):
+                        pfares = profRes.GetBinError(x); binx = profRes.GetBinCenter(x)
+
+                        if binx < 0.5 and binx > -0.5: pfares = -1 
+
+                        pfaresUp = profResUp.GetBinError(x) if profResUp != 0 else 0.0
+                        pfaresDown = profResDown.GetBinError(x) if profResDown != 0 else 0.0
+
+                        errLow = pfares-pfaresDown; errHigh = pfaresUp-pfares
+                        if not options["error"]:
+                            errLow = 0.
+                            errHigh = 0.
+
+                        if errLow < 0. and errHigh > 0. or errLow > 0. and errHigh < 0.:
+                            if abs(errLow) >= abs(errHigh): errHigh = 0.
+                            else: errLow = 0.
+
+                        if etBinLow:
+                            options["resLow"].SetPoint(x-1, binx, pfares); options["resLowBand"].SetPoint(x-1, binx, pfares)
+                            options["resLowBand"].SetPointError(x-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
+                            options["resLow"].SetPointError(x-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 0, 0)
+
+                        elif etBinHigh:
+                            options["resHigh"].SetPoint(x-1, binx, pfares); options["resHighBand"].SetPoint(x-1, binx, pfares)
+                            options["resHighBand"].SetPointError(x-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
+                            options["resHigh"].SetPointError(x-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 0, 0)
+
                 band = getUncertaintyBand(hPFA, hPFAUp, hPFADown, options["fcolor"])
                 bands.append(band)
 
@@ -334,7 +365,7 @@ if __name__ == '__main__':
                 ratios.append(hPFA)
 
                 # Here we decide the style options if we have an uncertainty band or not
-                if withUncertaintyBand: set1Doptions(profile, lineWidth = 1, markerColor = options["bmcolor"], lineColor = options["blcolor"], markerStyle = options["style"], markerSize = 2)
+                if withUncertaintyBand: set1Doptions(profile, lineWidth = 1, markerColor = options["bmcolor"], lineColor = options["bmcolor"], markerStyle = options["style"], markerSize = 2)
                 else:                   set1Doptions(profile, lineWidth = 0, markerColor = options["mcolor"], markerStyle = options["style"])
 
                 profiles.append(profile)
@@ -376,15 +407,9 @@ if __name__ == '__main__':
             theStack = ROOT.THStack("theStack_%s"%(name), ""); theStack.Draw()
 
             ietaList = name.split("ieta")[-1].split("_")[0].split("to"); ieta = int(ietaList[0])
-            skipRes = False; ietaStr = ""
-            if len(ietaList) > 1:
-                skipRes = True
-                ietaStr = "%s to %s"%(ietaList[0],ietaList[1])
-            else:
-                ietaStr = "%s"%(ietaList[0])
-
-            etBinLow  = "RHET0.0to10.0"  in name and "TPRH" in name and "TPETgt0.5" in name and "peak" in name
-            etBinHigh = ("RHET10.0to1000" in name or "RHET10.0toInf" in name) and "TPRH" in name and "TPETgt0.5" in name and "peak" in name
+            ietaStr = ""
+            if len(ietaList) > 1: ietaStr = "%s to %s"%(ietaList[0],ietaList[1])
+            else:                 ietaStr = "%s"%(ietaList[0])
 
             textYstart = 0.85; textYinc = 0.18
             textXstart = 0.75
@@ -398,36 +423,12 @@ if __name__ == '__main__':
                 if name not in MAPPFAHISTOS[scheme]: continue
 
                 hPFA = MAPPFAHISTOS[scheme][name]
-                hPFAUp = 0; hPFADown = 0;
-                if options["error"]:
-                    hPFAUp   = MAPPFAHISTOS[scheme + "Up"][name]
-                    hPFADown = MAPPFAHISTOS[scheme + "Down"][name]
 
-                pfares, pfaresUp, pfaresDown, pfamean = draw1DHisto(theStack, hPFA, hPFAUp, hPFADown, options["mcolor"], options["style"])
+                pfares, pfamean = draw1DHisto(theStack, hPFA, options["rcolor"], options["style"])
 
                 someTextPFA = ROOT.TPaveText(textXstart, textYstart-0.15, textXstart+0.17, textYstart, "trNDC")
                 prettyText(someTextPFA, options["mcolor"], options["scheme"], pfamean, pfares)
                 textList.append(someTextPFA)
-
-                if not skipRes:
-                    errLow = pfares-pfaresDown; errHigh = pfaresUp-pfares
-                    if not options["error"]:
-                        errLow = 0.
-                        errHigh = 0.
-
-                    if errLow < 0. and errHigh > 0. or errLow > 0. and errHigh < 0.:
-                        if abs(errLow) >= abs(errHigh): errHigh = 0.
-                        else: errLow = 0.
-
-                    if etBinLow:
-                        options["resLow"].SetPoint(ieta-1, ieta, pfares); options["resLowBand"].SetPoint(ieta-1, ieta, pfares)
-                        options["resLowBand"].SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
-                        options["resLow"].SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 0, 0)
-
-                    elif etBinHigh:
-                        options["resHigh"].SetPoint(ieta-1, ieta, pfares); options["resHighBand"].SetPoint(ieta-1, ieta, pfares)
-                        options["resHighBand"].SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 1*(errLow), 1*(errHigh))
-                        options["resHigh"].SetPointError(ieta-1, pfaResHistDummy.GetBinWidth(1)/2, pfaResHistDummy.GetBinWidth(1)/2, 0, 0)
 
                 textYstart -= textYinc
 
@@ -456,13 +457,13 @@ if __name__ == '__main__':
        
         pfaResHistDummy.Draw("")
 
-        textYstart = 0.93; textXstart = 0.9; textYinc = 0.09
+        textYstart = 0.94; textXstart = 0.93; textYinc = 0.09
         graphs = []; bands = []; texts = []
         for scheme, options in schemeMap.iteritems():
 
             iamText = ROOT.TPaveText(textXstart-0.1, textYstart-0.06, textXstart, textYstart, "trNDC"); iamText.SetFillColor(ROOT.kWhite); iamText.SetTextAlign(12); iamText.SetTextFont(63); iamText.SetTextSize(90)
             iamText.AddText(options["scheme"])
-            iamText.SetTextColor(options["mcolor"])
+            iamText.SetTextColor(options["rcolor"])
             texts.append(iamText)
 
             if scheme in MAPPFAHISTOS:
@@ -475,8 +476,8 @@ if __name__ == '__main__':
                     bands.append(options[regime+"Band"])
                     
                 else:
-                    set1Doptions(options[regime], lineWidth = 3, lineColor = options["lcolor"], markerSize = 4, markerColor = options["mcolor"])
-                    set1Doptions(options[regime+"Band"], lineWidth = 3, lineColor = options["lcolor"], markerSize = 4, markerColor = options["mcolor"])
+                    set1Doptions(options[regime], lineWidth = 3, lineColor = options["rcolor"], markerSize = 3, markerStyle = options["style"], markerColor = options["rcolor"])
+                    set1Doptions(options[regime+"Band"], lineWidth = 3, lineColor = options["rcolor"], markerSize = 3, markerStyle = options["style"], markerColor = options["rcolor"])
                     graphs.append(options[regime])
                     bands.append(options[regime+"Band"])
 
