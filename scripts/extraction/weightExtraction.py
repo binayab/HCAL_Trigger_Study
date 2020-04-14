@@ -74,6 +74,7 @@ class WeightExtractor:
         self.meanWeights = {}              # Maps depth,ieta,iWeight to a weight extracted from mean of distribution
         self.meanStatErrors = {}           # Maps depth,ieta,iWeight to a statistical error on the mean weight 
         self.meanSystErrors = {}           # Maps depth,ieta,iWeight to a systematic error on the mean weight 
+        self.meanRMSErrors = {}            # Maps depth,ieta,iWeight to the RMS of the weight distribution
         self.pulseShapesPU = {}            # Average pulse shapes for PU mapped by ieta,depth
         self.pulseShapesNOPU = {}          # Average pulse shapes for NOPU mapped by ieta,depth
         self.ietaDensity = {}              # Number of matched pulses mapped by ieta,depth
@@ -229,7 +230,7 @@ class WeightExtractor:
                                             self.ietaDensity[idepth][ts2Cut].Fill(abs(ieta))
 
                                             weights = self.extractWeights(puPulse, nopuPulse)
-                                            
+
                                             for ts in self.iWeights: self.weightHistos[idepth][abs(ieta)][ts][ts2Cut].Fill(weights[ts-1])
     
                                     hotStart = jTP
@@ -459,15 +460,14 @@ class WeightExtractor:
                         canvas.SaveAs(outPath + "/AveragePulse.pdf")
 
     # Method for drawing histogram of an extracted weight with its fit
-    def drawWeightHisto(self, ieta, depth, iWeight, rebin, ts2Cut, rebinHistos, rebinFits, rebinFitWeights, rebinFitStatErrors, theFitSystError, rebinMeanWeights, rebinMeanStatErrors, theMeanSystError):
+    def drawWeightHisto(self, ieta, depth, iWeight, rebin, ts2Cut, rebinHistos, rebinFits, rebinFitWeights, rebinMeanWeights, includeFit = False):
 
         if ts2Cut != self.ts2Cut: return 
 
         weightHisto = rebinHistos[rebin]; histoFit = rebinFits[rebin]
-
         fitWeight    = rebinFitWeights[rebin];    meanWeight    = rebinMeanWeights[rebin]
-        fitStatError = rebinFitStatErrors[rebin]; meanStatError = rebinMeanStatErrors[rebin]
-        fitSystError = theFitSystError;           meanSystError = theMeanSystError
+
+        histoRMS = weightHisto.GetStdDev()
 
         canvas = ROOT.TCanvas("c_i%d_d%d_w%d_r%d_TS2gt%d"%(ieta,depth,iWeight,rebin,ts2Cut), "c_i%d_d%d_w%d_r%d_TS2gt%d"%(ieta,depth,iWeight,rebin,ts2Cut), 2600, 2400); canvas.cd()
         canvas.SetGridx()
@@ -494,26 +494,29 @@ class WeightExtractor:
         weightHisto.GetYaxis().SetLabelSize(0.048); weightHisto.GetYaxis().SetTitleSize(0.054); weightHisto.GetYaxis().SetTitleOffset(1.45)
         weightHisto.GetXaxis().SetLabelSize(0.048); weightHisto.GetXaxis().SetTitleSize(0.054); weightHisto.GetXaxis().SetTitleOffset(0.9)
 
-        weightHisto.SetLineWidth(3)
-        weightHisto.SetLineColor(ROOT.kBlack)
+        weightHisto.SetLineWidth(4)
+        weightHisto.SetLineColor(ROOT.kBlue+2)
 
         histoFit.SetLineColor(ROOT.kRed)
         histoFit.SetLineWidth(5)
         histoFit.SetLineStyle(7)
 
-        someText = ROOT.TPaveText(0.21, 0.62, 0.56, 0.86, "trNDC")
+        someText = 0
+        if includeFit: someText = ROOT.TPaveText(0.21, 0.62, 0.56, 0.86, "trNDC")
+        else:          someText = ROOT.TPaveText(0.21, 0.62, 0.46, 0.86, "trNDC") 
 
-        #someText.AddText("Peak = %3.2f_{ #pm %3.2f (stat.)}^{ #pm %3.2f (syst.)}"%(fitWeight,fitStatError,fitSystError))
+        if includeFit:
+            someText.AddText("Peak (Fit) = %3.2f"%(fitWeight))
+            someText.AddText("#chi^{2} / ndf = %3.2f / %d"%(histoFit.GetChisquare(), histoFit.GetNDF()))
         someText.AddText("Mean = %3.2f"%(meanWeight))
-        someText.AddText("RMS = %3.2f"%(meanStatError))
-        #someText.AddText("#chi^{2} / ndf = %3.2f / %d"%(histoFit.GetChisquare(), histoFit.GetNDF()))
+        someText.AddText("RMS = %3.2f"%(histoRMS))
         someText.AddText("Entries = %d"%(weightHisto.GetEntries()))
         someText.SetTextAlign(12)
         someText.SetTextSize(0.035)
         someText.SetFillColor(ROOT.kWhite);
 
         weightHisto.Draw("HIST")
-        #histoFit.Draw("SAME")
+        if includeFit: histoFit.Draw("SAME")
         someText.Draw("SAME")
         ietaText.Draw("SAME")
     
@@ -522,7 +525,7 @@ class WeightExtractor:
         canvas.SaveAs(outPath + "/WeightDistribution_rebin%d.pdf"%(rebin))
 
     # Method for getting weights from fit of weight distribution
-    def extractFitWeights(self, save=False):
+    def extractFitWeights(self, save = False, includeFit = False):
 
         for subdet, ietaMap in self.HBHEMap.iteritems():
             for ieta, depths in ietaMap.iteritems():
@@ -536,7 +539,9 @@ class WeightExtractor:
 
                         for iWeight in self.iWeights:
 
-                            histo = self.weightHistos[depth][ieta][iWeight][ts2Cut]
+                            histo = 0
+                            try: histo = self.weightHistos[depth][ieta][iWeight][ts2Cut]
+                            except: continue
                             if histo.Integral() == 0:
                                 self.fitWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
                                 self.fitStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
@@ -544,6 +549,7 @@ class WeightExtractor:
                                 self.meanWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
                                 self.meanStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
                                 self.meanSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
+                                self.meanRMSErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, -999)
 
                                 continue 
 
@@ -611,7 +617,7 @@ class WeightExtractor:
                                 # Get the weight from the simple mean of the distribution
                                 # The stat error here is the simple stddev / number of entries
                                 rebinMeanWeights[rebin] = rHisto.GetMean() 
-                                rebinMeanStatErrors[rebin] = rHisto.GetStdDev()
+                                rebinMeanStatErrors[rebin] = rHisto.GetStdDev() / math.sqrt(numEntries)
 
                             # From the five different fits of the histogram determine the standard dev of the weights 
                             theFitWeight = rebinFitWeights[self.rebin]; theFitStatError = rebinFitStatErrors[self.rebin]
@@ -626,10 +632,11 @@ class WeightExtractor:
                             self.meanWeights.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanWeight)
                             self.meanStatErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanStatError)
                             self.meanSystErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, theMeanSystError)
+                            self.meanRMSErrors.setdefault(depth, {}).setdefault(ieta, {}).setdefault(iWeight, {}).setdefault(ts2Cut, rHisto.GetStdDev())
 
                             if save:
                                 for rebin in xrange(1,5):
-                                    self.drawWeightHisto(ieta, depth, iWeight, rebin, ts2Cut, rebinHistos, rebinFits, rebinFitWeights, rebinFitStatErrors, theFitSystError, rebinMeanWeights, rebinMeanStatErrors, theMeanSystError) 
+                                    self.drawWeightHisto(ieta, depth, iWeight, rebin, ts2Cut, rebinHistos, rebinFits, rebinFitWeights, rebinMeanWeights, includeFit) 
 
     # Method for calculating the averaged-over-depth weight for each ieta and average-over-depth for HB, HE1, HE2
     def getDepthAverageWeightsAndErrors(self, weightDict, statErrorDict, systErrorDict):
@@ -707,149 +714,73 @@ class WeightExtractor:
         weights = 0;    depthAverageWeights = 0;    subdetDepthAverageWeights = 0
         statErrors = 0; depthAverageStatErrors = 0; subdetDepthAverageStatErrors = 0
         systErrors = 0; depthAverageSystErrors = 0; subdetDepthAverageSystErrors = 0
+        rmsErrors  = 0;
 
         if   version == "Fit":  weights = self.fitWeights;  statErrors = self.fitStatErrors;  systErrors = self.fitSystErrors
         elif version == "Mean": weights = self.meanWeights; statErrors = self.meanStatErrors; systErrors = self.meanSystErrors
         else: return
 
+        rmsErrors = self.meanRMSErrors
+
         depthAverageWeights, subdetDepthAverageWeights, depthAverageStatErrors, \
         depthAverageSystErrors, subdetDepthAverageStatErrors, subdetDepthAverageSystErrors \
         = self.getDepthAverageWeightsAndErrors(weights, statErrors, systErrors)
 
-        emptyStr = "              -               & "
         for iWeight in self.iWeights:
             str2Write = "\nwSOI-%d:\n"%(3-iWeight)
 
             for subdet, ietaMap in self.HBHEMap.iteritems():
+
+                if self.withDepth:
+                    for ieta, depths in ietaMap.iteritems():
+
+                        ietaStr = "%d"%(ieta)
+                        str2Write += "ieta%s, depthAve, "%(ietaStr)
+                        
+                        if depthAverageWeights[ieta][iWeight] == -999: continue
+                        else:
+                            statError = depthAverageStatErrors[ieta][iWeight]
+                            systError = depthAverageSystErrors[ieta][iWeight]
+                            weightStr = "%3.2f"%(depthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
+                            str2Write += "weight%s, stat%3.2f, syst%3.2f\n"%(weightStr,statError,systError)
+
                 for ieta, depths in ietaMap.iteritems():
-
-                    ietaStr = "%d"%(ieta)
-                    ietaStr = ietaStr.rjust(3)
-
-                    str2Write += "%s & "%(ietaStr)
-                    
-                    if depthAverageWeights[ieta][iWeight] == -999:
-                        str2Write += emptyStr
-                    else:
-                        statError = depthAverageStatErrors[ieta][iWeight]
-                        systError = depthAverageSystErrors[ieta][iWeight]
-                        weightStr = "%3.2f"%(depthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
-                        str2Write += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
 
                     for depth in depths:
 
                         if self.withDepth and depth == 0 or not self.withDepth and depth > 0: continue
 
-                        if weights[depth][ieta][iWeight][self.ts2Cut] == -999: 
-                            if depth == depths[-1]: str2Write += emptyStr
-                            else: str2Write += emptyStr 
+                        if weights[depth][ieta][iWeight][self.ts2Cut] == -999: continue
                         else: 
+                            ietaStr = "%d"%(ieta)
+                            str2Write += "ieta%s, "%(ietaStr)
+
                             weightStr = "%3.2f"%(weights[depth][ieta][iWeight][self.ts2Cut]); weightStr = weightStr.rjust(5)
                             statError = statErrors[depth][ieta][iWeight][self.ts2Cut]
                             systError = systErrors[depth][ieta][iWeight][self.ts2Cut]
-                            str2Write += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
-                    str2Write += "\n"
+                            rmsError  = rmsErrors[depth][ieta][iWeight][self.ts2Cut]
+                            str2Write += "depth%d, weight%s, stat%3.2f, syst%3.2f, rms%3.2f\n"%(depth,weightStr,statError,systError,rmsError)
 
                     # When we have just printed a line about the last ieta in one of the subdets (HB, HE1, HE2)
                     # Print out the subdet average line for the respective subdet
                     if ieta == 16 or ieta == 20 or ieta == 28:
 
-                        detStr = "%s"%(subdet)
+                        detStr = "ieta%s"%(subdet)
                         detStr = detStr.rjust(3)
 
-                        str2Write += "%s & "%(detStr)
+                        str2Write += "%s, "%(detStr)
 
-                        if subdetDepthAverageWeights[subdet][iWeight] == -999:
-                            str2Write += emptyStr + emptyStr + emptyStr + emptyStr + emptyStr + emptyStr + emptyStr + emptyStr
+                        if self.withDepth: str2Write += "depthAve, "
+                        else:              str2Write += "depth0, "
+
+                        if subdetDepthAverageWeights[subdet][iWeight] == -999: continue
                         else:
                             statError = subdetDepthAverageStatErrors[subdet][iWeight]
                             systError = subdetDepthAverageSystErrors[subdet][iWeight]
                             weightStr = "%3.2f"%(subdetDepthAverageWeights[subdet][iWeight]); weightStr = weightStr.rjust(5)
-                            str2Write += "$%s_{\pm %3.2f}^{\pm %3.2f}$ & "%(weightStr,statError,systError)
-                            str2Write += emptyStr + emptyStr + emptyStr + emptyStr + emptyStr + emptyStr + emptyStr
+                            str2Write += "weight%s, stat%3.2f, syst%3.2f\n"%(weightStr,statError,systError)
 
-                        str2Write += "\n"
             summary.write(str2Write)                   
-        summary.close()
-
-        # Now write the python-friendly version for importing into CMSSW
-        summary = open("%s/weightSummaryPython%s.txt"%(self.outPath,version), "w")
-
-        depthStr = ""
-        if "WithDepth" in self.outPath: depthStr = "_DEPTH_AVE"
-
-        versionStr = ""
-        if version == "Mean": versionStr = "_MEAN"
-
-        str2Write = ""
-        for tag in ["", "_UP", "_DOWN"]:
-            str2Write += "\"%s%s_PER_IETA%s%s\" : cms.untracked.PSet(**dict([\n"%(self.scheme,depthStr,versionStr,tag)
-            firstIeta = True
-
-            for subdet, ietaMap in self.HBHEMap.iteritems():
-                for ieta in ietaMap.keys():
-
-                    ietaStr = "    (\"%d\","%(ieta)
-                    ietaStr = ietaStr.ljust(11)
-                    
-                    if not firstIeta: str2Write += ",\n"
-                    str2Write += "%s cms.untracked.vdouble("%(ietaStr)
-                    firstWeight = True
-                    for iWeight in self.iWeights:
-                        if not firstWeight: str2Write += ", " 
-
-                        if depthAverageWeights[ieta][iWeight] == -999:
-                            continue
-                        else:
-                            statError = depthAverageStatErrors[ieta][iWeight]
-                            systError = depthAverageSystErrors[ieta][iWeight]
-                            weightStr = "%3.2f"%(depthAverageWeights[ieta][iWeight]); weightStr = weightStr.rjust(5)
-
-                            if   "UP"   in tag: str2Write += "%s + (%3.2f**2 + %3.2f**2)**0.5"%(weightStr,statError,systError)
-                            elif "DOWN" in tag: str2Write += "%s - (%3.2f**2 + %3.2f**2)**0.5"%(weightStr,statError,systError)
-                            else:               str2Write += "%s"%(weightStr)
-
-                        firstWeight = False
-                    
-                    firstIeta = False
-                    str2Write += "))"
-
-            str2Write += "\n])),\n\n"
-
-        str2Write += "\n"
-        for tag in ["", "_UP", "_DOWN"]:
-            str2Write += "\"%s%s_AVE%s%s\" : cms.untracked.PSet(**dict([\n"%(self.scheme,depthStr,versionStr,tag)
-            firstIeta = True
-            for subdet, ietaMap in self.HBHEMap.iteritems():
-                for ieta in ietaMap.keys():
-
-                    ietaStr = "%d"%(ieta)
-                    ietaStr = ietaStr.rjust(2)
-
-                    if not firstIeta: str2Write += ",\n"
-                    str2Write += "    (\"%s\", cms.untracked.vdouble("%(ietaStr)
-                    firstWeight = True
-                    for iWeight in self.iWeights:
-                        if not firstWeight: str2Write += ", "
-                        if subdetDepthAverageWeights[subdet][iWeight] == -999: continue 
-                        else:
-                            statError = subdetDepthAverageStatErrors[subdet][iWeight]
-                            systError = subdetDepthAverageSystErrors[subdet][iWeight]
-
-                            weightStr = "%3.2f"%(subdetDepthAverageWeights[subdet][iWeight]); weightStr = weightStr.rjust(5)
-
-                            if   "UP"   in tag: str2Write += "%s + (%3.2f**2 + %3.2f**2)**0.5"%(weightStr,statError,systError)
-                            elif "DOWN" in tag: str2Write += "%s - (%3.2f**2 + %3.2f**2)**0.5"%(weightStr,statError,systError)
-                            else:               str2Write += "%s"%(weightStr)
-
-                        firstWeight = False
-
-                    firstIeta = False
-                    str2Write += "))"
-
-            str2Write += "\n])),\n\n"
-
-        summary.write(str2Write)                   
         summary.close()
 
 if __name__ == '__main__':
@@ -922,9 +853,9 @@ if __name__ == '__main__':
         theExtractor = WeightExtractor(args.scheme, "", "", outPath, args.depth)
 
         theExtractor.loadHistograms()
-        theExtractor.extractFitWeights(save=True)
+        theExtractor.extractFitWeights(save=True, includeFit=False)
         theExtractor.getWeightSummary("Mean")
         theExtractor.getWeightSummary("Fit")
 
-        theExtractor.drawPulseShapes("PU")
-        if not args.nugun: theExtractor.drawPulseShapes("NOPU")
+        #theExtractor.drawPulseShapes("PU")
+        #if not args.nugun: theExtractor.drawPulseShapes("NOPU")
