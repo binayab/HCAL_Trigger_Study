@@ -23,7 +23,7 @@ def files4Dataset(dataset):
     returnFiles = []
     for file in files:
         if onEOS: returnFiles.append(file.replace("/store/", "root://cmsxrootd.fnal.gov///store/"))
-        else:     returnFiles.append(file.replace("/store/", "root://cms-xrd-global.cern.ch///store/"))
+        else:     returnFiles.append(file.replace("/store/", "root://cmsxrootd.fnal.gov///store/"))
 
     return returnFiles 
 
