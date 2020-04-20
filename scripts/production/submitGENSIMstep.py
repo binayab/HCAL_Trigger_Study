@@ -24,7 +24,7 @@ def generate_job_steerer(workingDir, step1, outputDir, CMSSW_VERSION):
     scriptFile.write("scramv1 b ProjectRename\n")
     scriptFile.write("eval `scramv1 runtime -sh`\n\n")
     scriptFile.write("cmsRun %s ${SEED} ${EVENTS} ${RUN}\n\n"%(step1))
-    scriptFile.write("xrdcp -f step1.root %s/${SEED}.root 2>&1\n"%(outputDir))
+    scriptFile.write("xrdcp -f step1.root %s/${SEED}_${RUN}.root 2>&1\n"%(outputDir))
     scriptFile.write("cd ${_CONDOR_SCRATCH_DIR}\n")
     scriptFile.write("rm -r %s\n"%(CMSSW_VERSION))
     scriptFile.close()
@@ -36,7 +36,7 @@ def generate_condor_submit(workingDir, step1, eventsPerJob, njobs, CMSSW_VERSION
     condorSubmit.write("Executable           =  %s/runJob.sh\n"%(workingDir))
     condorSubmit.write("Universe             =  vanilla\n")
     condorSubmit.write("Requirements         =  OpSys == \"LINUX\" && Arch ==\"x86_64\"\n")
-    condorSubmit.write("Request_Memory       =  5 Gb\n")
+    condorSubmit.write("Request_Memory       =  2 Gb\n")
     condorSubmit.write("Output               =  %s/logs/$(Cluster)_$(Process).stdout\n"%(workingDir))
     condorSubmit.write("Error                =  %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
     condorSubmit.write("Log                  =  %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
@@ -60,6 +60,7 @@ if __name__ == '__main__':
     parser.add_argument("--noSubmit"     , dest="noSubmit"     , help="do not submit to cluster", default=False, action="store_true")
     parser.add_argument("--tag"          , dest="tag"          , help="Unique tag"              , type=str , default="NULL")
     parser.add_argument("--step1"        , dest="step1"        , help="Script file for step1"   , type=str , default="NULL")
+    parser.add_argument("--process"      , dest="process"      , help="Friendly process name"   , type=str , default="NULL")
     parser.add_argument("--njobs"        , dest="njobs"        , help="Number of jobs"          , type=int , default=-1)
     parser.add_argument("--eventsPerJob" , dest="eventsPerJob" , help="Script file for step1"   , type=int , default=-1)
     args = parser.parse_args()
@@ -68,23 +69,30 @@ if __name__ == '__main__':
     step1        = args.step1
     njobs        = args.njobs
     eventsPerJob = args.eventsPerJob
+    process      = args.process
     noSubmit     = args.noSubmit
 
     if tag == "NULL" or step1 == "NULL": quit()
     if njobs == -1 or eventsPerJob == -1: quit()
    
+    # Get CMSSW environment
+    CMSSW_BASE = os.getenv("CMSSW_BASE")
+    CMSSW_VERSION = os.getenv("CMSSW_VERSION")
+    HOME = os.getenv("HOME")
+    USER = os.getenv("USER")
+
     taskDir = strftime("%Y%m%d_%H%M%S")
-    hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(os.getenv("HOME"))
+    hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(HOME)
     
-    outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/GEN-SIM/TTbar/%s"%(tag)
-    workingDir = "%s/condor/%s_TTbar_%s"%(hcalDir, tag, taskDir)
+    outputDir = "root://cmseos.fnal.gov///store/user/%s/HCAL_Trigger_Study/production/%s/GEN-SIM/%s"%(USER,process,tag)
+    workingDir = "%s/condor/%s_%s_%s"%(hcalDir, tag, process, taskDir)
     
     # After defining the directory to work the job in and output to, make them
     subprocess.call(["eos", "root://cmseos.fnal.gov", "mkdir", "-p", outputDir[23:]])
     os.makedirs(workingDir)
     
     # Send the cmsRun config to the working dir
-    try: shutil.copy2("%s/scripts/%s"%(hcalDir,step1), workingDir)
+    try: shutil.copy2("%s/scripts/production/%s"%(hcalDir,step1), workingDir)
     except:
         print "Unable to copy cmsRun config \"%s\""%(step1)
         print "Exiting..."
@@ -95,9 +103,6 @@ if __name__ == '__main__':
 
     # Create directories to save logs
     os.makedirs("%s/logs"%(workingDir))
-
-    # Get CMSSW environment
-    CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
 
     # Make the .sh to run the show
     generate_job_steerer(workingDir, step1, outputDir, CMSSW_VERSION)

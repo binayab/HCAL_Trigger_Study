@@ -7,9 +7,7 @@ from time import strftime
 random.seed()
 
 # With either a local EOS directory or dataset from DAS, get the list of files
-def files4Dataset(dataset):
-
-    onEOS = os.getenv("USER") in dataset
+def files4Dataset(dataset, onEOS):
 
     # If my name is in the path then we are on EOS
     if onEOS: proc = subprocess.Popen(['xrdfs', 'root://cmseos.fnal.gov', 'ls', dataset], stdout=subprocess.PIPE) 
@@ -56,7 +54,7 @@ def generate_condor_submit(workingDir, step2, inputFiles, CMSSW_VERSION):
     condorSubmit.write("Executable           =  %s/runJob.sh\n"%(workingDir))
     condorSubmit.write("Universe             =  vanilla\n")
     condorSubmit.write("Requirements         =  OpSys == \"LINUX\" && Arch ==\"x86_64\"\n")
-    condorSubmit.write("Request_Memory       =  5 Gb\n")
+    condorSubmit.write("Request_Memory       =  2 Gb\n")
     condorSubmit.write("Output               =  %s/logs/$(Cluster)_$(Process).stdout\n"%(workingDir))
     condorSubmit.write("Error                =  %s/logs/$(Cluster)_$(Process).stderr\n"%(workingDir))
     condorSubmit.write("Log                  =  %s/logs/$(Cluster)_$(Process).log\n"%(workingDir))
@@ -82,22 +80,32 @@ if __name__ == '__main__':
     parser.add_argument("--dataset" , dest="dataset" , help="Unique path to dataset"  , type=str , default="NULL")
     parser.add_argument("--step2"   , dest="step2"   , help="Name of script for step2", type=str , default="NULL")
     parser.add_argument("--tag"     , dest="tag"     , help="Unique tag"              , type=str , default="NULL")
+    parser.add_argument("--process" , dest="process" , help="Physics process"         , type=str , default="NULL")
     args = parser.parse_args()
 
     tag      = args.tag
     step2    = args.step2
     dataset  = args.dataset
     noSubmit = args.noSubmit
+    process  = args.process
 
     if tag == "NULL" or dataset == "NULL": quit()
    
+    # Get environment for CMSSW
+    CMSSW_BASE = os.getenv("CMSSW_BASE")
+    CMSSW_VERSION = os.getenv("CMSSW_VERSION")
+    HOME = os.getenv("HOME")
+    USER = os.getenv("USER")
+
     taskDir = strftime("%Y%m%d_%H%M%S")
-    hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(os.getenv("HOME"))
+    hcalDir = "%s/nobackup/HCAL_Trigger_Study"%(HOME)
+
+    onEOS = False
+    if USER in dataset: onEOS = True
     
-    inputFiles = files4Dataset(dataset)
-    physProcess = dataset.split("/")[1].split("_")[0]
+    inputFiles = files4Dataset(dataset, onEOS)
     
-    outputDir = "root://cmseos.fnal.gov///store/user/jhiltbra/HCAL_Trigger_Study/GEN-SIM-DIGI-RAW/%s/%s"%(physProcess, tag)
+    outputDir = "root://cmseos.fnal.gov///store/user/%s/HCAL_Trigger_Study/production/%s/RAW/%s"%(USER, process, tag)
     workingDir = "%s/condor/%s_%s_%s"%(hcalDir, physProcess, tag, taskDir)
     
     # After defining the directory to work the job in and output to, make them
@@ -105,7 +113,7 @@ if __name__ == '__main__':
     os.makedirs(workingDir)
     
     # Send the cmsRun config to the working dir
-    try: shutil.copy2("%s/scripts/%s"%(hcalDir,step2), workingDir)
+    try: shutil.copy2("%s/scripts/production/%s"%(hcalDir,step2), workingDir)
     except:
         print "Unable to copy cmsRun config \"%s\""%(step2)
         print "Exiting..."
@@ -116,9 +124,6 @@ if __name__ == '__main__':
 
     # Create directories to save logs
     os.makedirs("%s/logs"%(workingDir))
-
-    # Get environment for CMSSW
-    CMSSW_BASE = os.getenv("CMSSW_BASE");  CMSSW_VERSION = os.getenv("CMSSW_VERSION")
 
     # Make the .sh to run the show
     generate_job_steerer(workingDir, step2, outputDir, CMSSW_VERSION)
